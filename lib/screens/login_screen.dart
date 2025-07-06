@@ -18,40 +18,53 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isPasswordVisible = false;
 
   void _login() async {
+    // Show a loading indicator
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) => const Center(child: CircularProgressIndicator()),
     );
 
+    // Call the login service
     final Map<String, dynamic>? loginData = await _authService.login(
       _nameController.text,
       _passwordController.text,
     );
 
-    Navigator.pop(context);
+    // Dismiss the loading indicator
+    if (mounted) {
+      Navigator.pop(context);
+    }
 
     if (loginData != null) {
-      final bool isAdmin = loginData['is_admin'];
-
-      if (isAdmin) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const DashboardScreen()),
-        );
+      // Safely check if the 'is_admin' value is the boolean true
+      if (loginData['is_admin'] == true) {
+        // Navigate to Admin Dashboard
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const DashboardScreen()),
+          );
+        }
       } else {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const MainScreen()),
-        );
+        // Navigate to Normal User Home Screen
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const MainScreen()),
+          );
+        }
       }
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Login Failed. Please check your credentials.'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      // Show login failed SnackBar
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Login Failed. Please check your credentials.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -66,17 +79,22 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                // Your login UI
                 Image.asset('assets/images/login.jpg', height: 200),
                 const SizedBox(height: 32),
                 const Text('Login', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
                 const Text('Please Sign in to continue.', style: TextStyle(fontSize: 16, color: Colors.grey)),
                 const SizedBox(height: 32),
+
+                // Name TextField
                 TextField(
                   controller: _nameController,
                   decoration: _buildInputDecoration('Name', Icons.person_outline),
                 ),
                 const SizedBox(height: 16),
+
+                // Password TextField
                 TextField(
                   controller: _passwordController,
                   obscureText: !_isPasswordVisible,
@@ -88,6 +106,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 24),
+
+                // Sign In Button
                 ElevatedButton(
                   onPressed: _login,
                   style: ElevatedButton.styleFrom(
@@ -98,6 +118,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: const Text('Sign in', style: TextStyle(fontSize: 18, color: Colors.white)),
                 ),
                 const SizedBox(height: 24),
+
+                // Register Navigation
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -116,6 +138,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  // Helper method for styling TextFields
   InputDecoration _buildInputDecoration(String labelText, IconData prefixIcon) {
     return InputDecoration(
       labelText: labelText,

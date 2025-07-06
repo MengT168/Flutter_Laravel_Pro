@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lara_flutter_pro/screens/attribute_screen.dart';
 import 'package:lara_flutter_pro/screens/category_screen.dart';
+import 'package:lara_flutter_pro/screens/logo_screen.dart';
 import '../auth/auth_service.dart';
 import 'login_screen.dart';
 
@@ -16,6 +17,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Map<String, dynamic>? _adminUser;
   int _categoryCount = 0;
   int _attributeCount = 0;
+  int _logoCount = 0;
   bool _isLoading = true;
 
   @override
@@ -24,15 +26,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _fetchDashboardData();
   }
 
+  /// Fetches all necessary data for the dashboard concurrently.
   Future<void> _fetchDashboardData() async {
     if (mounted) setState(() => _isLoading = true);
 
     try {
-      // Fetch user, category, and attribute data at the same time for efficiency
+      // Fetch all data points at the same time for efficiency
       final results = await Future.wait([
         _authService.getCurrentUser(),
         _authService.getCategories(),
         _authService.getAttributes(),
+        _authService.getLogos(),
       ]);
 
       if (mounted) {
@@ -40,6 +44,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           _adminUser = results[0] as Map<String, dynamic>?;
           _categoryCount = (results[1] as List).length;
           _attributeCount = (results[2] as List).length;
+          _logoCount = (results[3] as List).length;
           _isLoading = false;
         });
       }
@@ -82,6 +87,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // Dynamic Admin User Info Card
               ListTile(
                 leading: const Icon(Icons.person_pin_circle, size: 40, color: Colors.black54),
                 title: Text(
@@ -148,9 +154,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                   ),
 
-                  // _buildStatCard('0', 'Products'), // Placeholder
-                  // _buildStatCard('0', 'Pending Orders'), // Placeholder
-                  // _buildStatCard('\$0.00', 'Earnings'), // Placeholder
+                  // Logos Card
+                  InkWell(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const LogoScreen()),
+                      ).then((_) => _fetchDashboardData()); // Refresh on return
+                    },
+                    borderRadius: BorderRadius.circular(12),
+                    child: _buildStatCard(
+                      _logoCount.toString(),
+                      'Logos',
+                    ),
+                  ),
+
+                  _buildStatCard('0', 'Products'), // Placeholder
+                  _buildStatCard('\$0.00', 'Earnings'), // Placeholder
                 ],
               ),
             ],
@@ -160,6 +180,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  /// Helper for stat card UI
   Widget _buildStatCard(String value, String label) {
     return Card(
       elevation: 2,
@@ -183,6 +204,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  /// Helper for button styling
   ButtonStyle _buttonStyle() {
     return ElevatedButton.styleFrom(
       backgroundColor: const Color(0xFFC07F26),

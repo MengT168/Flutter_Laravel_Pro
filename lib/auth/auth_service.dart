@@ -1,9 +1,18 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:image_picker/image_picker.dart';
 
 class AuthService {
-  final String _baseUrl = 'http://127.0.0.1:8000/api';
+
+  final String _baseUrl = kIsWeb
+      ? 'http://127.0.0.1:8000/api'   // Use this for Web
+      : 'http://10.0.2.2:8000/api';
+  final String serverUrl = kIsWeb
+      ? 'http://127.0.0.1:8000'   // For Web
+      : 'http://10.0.2.2:8000';
+
 
   Future<bool> register(String name, String email, String password) async {
     try {
@@ -65,6 +74,7 @@ class AuthService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+        print('RAW API RESPONSE FOR LOGIN: $data');
 
         // 3. Check for the access_token from your API response
         if (data['access_token'] != null) {
@@ -269,6 +279,74 @@ class AuthService {
 
     final response = await http.delete(
       Uri.parse('$_baseUrl/admin/attribute/delete/$id'),
+      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
+    );
+    return response.statusCode == 200;
+  }
+
+  Future<List<dynamic>> getLogos() async {
+    final token = await getToken();
+    if (token == null) return [];
+    final response = await http.get(
+      Uri.parse('$_baseUrl/admin/list-logo'),
+      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
+    );
+    if (response.statusCode == 200) {
+      print(response.body);
+      return jsonDecode(response.body)['data'] as List<dynamic>;
+    }
+    return [];
+  }
+
+  Future<bool> addLogo(XFile imageFile) async {
+    final token = await getToken();
+    if (token == null) return false;
+    var request = http.MultipartRequest('POST', Uri.parse('$_baseUrl/admin/add-logo'));
+    request.headers['Authorization'] = 'Bearer $token';
+    request.headers['Accept'] = 'application/json';
+
+    if (kIsWeb) {
+      request.files.add(http.MultipartFile.fromBytes('thumbnail', await imageFile.readAsBytes(), filename: imageFile.name));
+    } else {
+      request.files.add(await http.MultipartFile.fromPath('thumbnail', imageFile.path));
+    }
+
+    var response = await request.send();
+    return response.statusCode == 200;
+  }
+
+  Future<bool> updateLogo(int id, XFile imageFile) async {
+    final token = await getToken();
+    if (token == null) return false;
+    var request = http.MultipartRequest('POST', Uri.parse('$_baseUrl/admin/logo/update/$id'));
+    request.headers['Authorization'] = 'Bearer $token';
+    request.headers['Accept'] = 'application/json';
+
+    if (kIsWeb) {
+      request.files.add(http.MultipartFile.fromBytes('thumbnail', await imageFile.readAsBytes(), filename: imageFile.name));
+    } else {
+      request.files.add(await http.MultipartFile.fromPath('thumbnail', imageFile.path));
+    }
+
+    var response = await request.send();
+    return response.statusCode == 200;
+  }
+
+  Future<bool> toggleLogoStatus(int id) async {
+    final token = await getToken();
+    if (token == null) return false;
+    final response = await http.patch( // Your route uses PATCH
+      Uri.parse('$_baseUrl/admin/logo/toggle-status/$id'),
+      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
+    );
+    return response.statusCode == 200;
+  }
+
+  Future<bool> deleteLogo(int id) async {
+    final token = await getToken();
+    if (token == null) return false;
+    final response = await http.delete(
+      Uri.parse('$_baseUrl/admin/logo/delete/$id'),
       headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
     );
     return response.statusCode == 200;
