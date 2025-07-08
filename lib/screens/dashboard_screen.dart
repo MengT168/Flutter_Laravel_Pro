@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:lara_flutter_pro/screens/attribute_screen.dart';
 import 'package:lara_flutter_pro/screens/category_screen.dart';
 import 'package:lara_flutter_pro/screens/logo_screen.dart';
+import 'package:lara_flutter_pro/screens/product_list_screen.dart';
 import '../auth/auth_service.dart';
 import 'login_screen.dart';
 
@@ -18,6 +19,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   int _categoryCount = 0;
   int _attributeCount = 0;
   int _logoCount = 0;
+  int _productCount = 0;
   bool _isLoading = true;
 
   @override
@@ -37,6 +39,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         _authService.getCategories(),
         _authService.getAttributes(),
         _authService.getLogos(),
+        _authService.getProducts(),
       ]);
 
       if (mounted) {
@@ -45,6 +48,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           _categoryCount = (results[1] as List).length;
           _attributeCount = (results[2] as List).length;
           _logoCount = (results[3] as List).length;
+          _productCount = (results[4] as List).length;
           _isLoading = false;
         });
       }
@@ -130,7 +134,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(builder: (_) => const CategoryScreen()),
-                      ).then((_) => _fetchDashboardData()); // Refresh on return
+                      ).then((_) => _fetchDashboardData());
                     },
                     borderRadius: BorderRadius.circular(12),
                     child: _buildStatCard(
@@ -145,7 +149,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(builder: (_) => const AttributeScreen()),
-                      ).then((_) => _fetchDashboardData()); // Refresh on return
+                      ).then((_) => _fetchDashboardData());
                     },
                     borderRadius: BorderRadius.circular(12),
                     child: _buildStatCard(
@@ -160,7 +164,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(builder: (_) => const LogoScreen()),
-                      ).then((_) => _fetchDashboardData()); // Refresh on return
+                      ).then((_) => _fetchDashboardData());
                     },
                     borderRadius: BorderRadius.circular(12),
                     child: _buildStatCard(
@@ -169,7 +173,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                   ),
 
-                  _buildStatCard('0', 'Products'), // Placeholder
+                  // Products Card
+                  InkWell(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const ProductListScreen()),
+                      ).then((_) => _fetchDashboardData());
+                    },
+                    borderRadius: BorderRadius.circular(12),
+                    child: _buildStatCard(
+                      _productCount.toString(),
+                      'Products',
+                    ),
+                  ),
+
                   _buildStatCard('\$0.00', 'Earnings'), // Placeholder
                 ],
               ),

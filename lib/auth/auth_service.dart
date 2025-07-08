@@ -351,4 +351,92 @@ class AuthService {
     );
     return response.statusCode == 200;
   }
+  Future<List<dynamic>> getProducts() async {
+    final token = await getToken();
+    if (token == null) return [];
+    final response = await http.get(
+      Uri.parse('$_baseUrl/admin/list-product'),
+      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body)['data'] as List<dynamic>;
+    }
+    return [];
+  }
+
+  Future<bool> deleteProduct(int id) async {
+    final token = await getToken();
+    if (token == null) return false;
+    final response = await http.delete(
+      Uri.parse('$_baseUrl/admin/product/delete/$id'),
+      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
+    );
+    return response.statusCode == 200;
+  }
+
+  Future<bool> addProduct(Map<String, String> fields, List<String> sizeIds, List<String> colorIds, XFile? image) async {
+    final token = await getToken();
+    if (token == null) return false;
+
+    var request = http.MultipartRequest('POST', Uri.parse('$_baseUrl/admin/add-product-submit'));
+    request.headers['Authorization'] = 'Bearer $token';
+    request.headers['Accept'] = 'application/json';
+
+    request.fields.addAll(fields);
+
+    for (var id in sizeIds) { request.fields['size[]'] = id; }
+    for (var id in colorIds) { request.fields['color[]'] = id; }
+
+    if (image != null) {
+      if (kIsWeb) {
+        request.files.add(http.MultipartFile.fromBytes('thumbnail', await image.readAsBytes(), filename: image.name));
+      } else {
+        request.files.add(await http.MultipartFile.fromPath('thumbnail', image.path));
+      }
+    }
+
+    var response = await request.send();
+    return response.statusCode == 200;
+  }
+  Future<bool> updateProduct(int id, Map<String, String> fields, List<String> sizeIds, List<String> colorIds, XFile? image) async {
+    final token = await getToken();
+    if (token == null) return false;
+
+    var request = http.MultipartRequest(
+      'POST',
+      Uri.parse('$_baseUrl/admin/product/update/$id'),
+    );
+
+    request.headers['Authorization'] = 'Bearer $token';
+    request.headers['Accept'] = 'application/json';
+
+    request.fields.addAll(fields);
+
+    for (var id in sizeIds) { request.fields['size[]'] = id; }
+    for (var id in colorIds) { request.fields['color[]'] = id; }
+
+    if (image != null) {
+      if (kIsWeb) {
+        request.files.add(http.MultipartFile.fromBytes('thumbnail', await image.readAsBytes(), filename: image.name));
+      } else {
+        request.files.add(await http.MultipartFile.fromPath('thumbnail', image.path));
+      }
+    }
+
+    var response = await request.send();
+    return response.statusCode == 200;
+  }
+
+  Future<Map<String, dynamic>?> getHomeData() async {
+    try {
+      final response = await http.get(Uri.parse('$_baseUrl/home'));
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body)['data'];
+      }
+      return null;
+    } catch (e) {
+      print('Error fetching home data: $e');
+      return null;
+    }
+  }
 }
