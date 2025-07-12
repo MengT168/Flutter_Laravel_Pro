@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:lara_flutter_pro/screens/product_detail_screen.dart';
 import '../auth/auth_service.dart';
-import 'login_screen.dart'; // Ensure this path is correct
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -11,277 +11,189 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final AuthService _authService = AuthService();
-  String _userName = '';
-  List<dynamic> _products = [];
+  Map<String, List<dynamic>> _products = {
+    'new_products': [],
+    'promotion_products': [],
+    'popular_products': [],
+  };
   bool _isLoading = true;
-  String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
-    _loadData();
+    _fetchHomeData();
   }
 
-  Future<void> _loadData() async {
-    // ... (Your existing _loadData function remains unchanged)
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-
-    try {
-      final user = await _authService.getCurrentUser();
-      if (user != null && user['name'] != null) {
-        _userName = user['name'];
-      } else {
-        _userName = 'User';
-      }
-      _products = await _authService.getUsers();
-    } catch (e) {
-      _errorMessage = 'Failed to load data: $e';
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+  Future<void> _fetchHomeData() async {
+    if (!mounted) return;
+    setState(() => _isLoading = true);
+    final data = await _authService.getHomeData();
+    if (data != null && mounted) {
+      setState(() {
+        _products['new_products'] = data['new_products'] ?? [];
+        _products['promotion_products'] = data['promotion_products'] ?? [];
+        _products['popular_products'] = data['popular_products'] ?? [];
+        _isLoading = false;
+      });
+    } else if (mounted) {
+      setState(() => _isLoading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // ** THE SCAFFOLD HAS BEEN REMOVED FROM HERE **
-    // The body of the screen is now returned directly.
-    return SafeArea(
-      child: _isLoading
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('My Shop'),
+        actions: [
+          IconButton(icon: const Icon(Icons.search), onPressed: () {}),
+          IconButton(icon: const Icon(Icons.favorite_border), onPressed: () {}),
+        ],
+      ),
+      body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : _errorMessage != null
-          ? Center(
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Text(_errorMessage!,
-              style: const TextStyle(color: Colors.red, fontSize: 16),
-              textAlign: TextAlign.center),
-        ),
-      )
           : RefreshIndicator(
-        onRefresh: _loadData,
+        onRefresh: _fetchHomeData,
         child: ListView(
-          padding: const EdgeInsets.all(16.0),
           children: [
-            _buildTopBar(),
-            const SizedBox(height: 20),
-            _buildSearchBar(),
-            const SizedBox(height: 20),
-            _buildPromoBanner(),
-            const SizedBox(height: 20),
-            _buildCategoryFilters(),
-            const SizedBox(height: 24),
-            _buildSectionHeader("Popular", () {}),
-            const SizedBox(height: 12),
-            _buildProductList(),
+            const SizedBox(height: 16),
+            _buildSectionHeader('New Arrivals'),
+            _buildProductCarousel(_products['new_products'] ?? []),
+            const SizedBox(height: 16),
+            _buildSectionHeader('Promotions'),
+            _buildProductCarousel(_products['promotion_products'] ?? []),
+            const SizedBox(height: 16),
+            _buildSectionHeader('Popular Products'),
+            _buildProductCarousel(_products['popular_products'] ?? []),
+            const SizedBox(height: 16),
           ],
         ),
       ),
     );
   }
 
-  // All your _build... helper widgets remain exactly the same
-  // ... (_buildTopBar, _buildSearchBar, etc.) ...
-  Widget _buildTopBar() {
-    // ... same code ...
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          'Hi, $_userName',
-          style: const TextStyle(
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        IconButton(
-          icon: const Icon(Icons.logout_outlined, size: 28, color: Colors.grey),
-          tooltip: 'Logout',
-          onPressed: () async {
-            await _authService.logout();
-            Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(builder: (context) => const LoginScreen()),
-                  (Route<dynamic> route) => false,
-            );
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSearchBar() {
-    // ... same code ...
-    return TextField(
-      decoration: InputDecoration(
-        hintText: 'Search for shoes, clothes...',
-        prefixIcon: const Icon(Icons.search, color: Colors.grey),
-        filled: true,
-        fillColor: Colors.grey[200],
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12.0),
-          borderSide: BorderSide.none,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPromoBanner() {
-    // ... same code ...
-    return Container(
-      height: 150,
-      decoration: BoxDecoration(
-        color: Colors.pink.shade100,
-        borderRadius: BorderRadius.circular(15),
-        image: const DecorationImage(
-          image: NetworkImage('https://img.freepik.com/free-psd/special-sale-banner-template_23-2148975925.jpg'),
-          fit: BoxFit.cover,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCategoryFilters() {
-    // ... same code ...
-    return SizedBox(
-      height: 40,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
+  Widget _buildSectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          _categoryChip("All", isSelected: true),
-          _categoryChip("Shoes"),
-          _categoryChip("Apparel"),
-          _categoryChip("Bags"),
-          _categoryChip("Electronics"),
+          Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          TextButton(onPressed: () {}, child: const Text('See All')),
         ],
       ),
     );
   }
 
-  Widget _categoryChip(String title, {bool isSelected = false}) {
-    // ... same code ...
-    return Padding(
-      padding: const EdgeInsets.only(right: 8.0),
-      child: ChoiceChip(
-        label: Text(title),
-        selected: isSelected,
-        onSelected: (selected) {},
-        backgroundColor: Colors.grey[200],
-        selectedColor: Colors.blue.shade100,
-        labelStyle: TextStyle(color: isSelected ? Colors.blue.shade800 : Colors.black),
-        shape: const StadiumBorder(),
-        side: BorderSide(color: Colors.grey[300]!),
-      ),
-    );
-  }
-
-  Widget _buildSectionHeader(String title, VoidCallback onSeeAll) {
-    // ... same code ...
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          title,
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        ),
-        TextButton(
-          onPressed: onSeeAll,
-          child: const Text('See All'),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildProductList() {
-    // ... same code ...
+  Widget _buildProductCarousel(List<dynamic> products) {
+    if (products.isEmpty) {
+      return const SizedBox(height: 240, child: Center(child: Text('No products found.')));
+    }
     return SizedBox(
-      height: 260,
-      child: _products.isEmpty
-          ? const Center(child: Text('No products found.'))
-          : ListView.builder(
+      height: 240,
+      child: ListView.builder(
         scrollDirection: Axis.horizontal,
-        itemCount: _products.length,
+        padding: const EdgeInsets.symmetric(horizontal: 12.0),
+        itemCount: products.length,
         itemBuilder: (context, index) {
-          final product = _products[index];
-          return ProductCard(
-            imageUrl: 'https://i.pravatar.cc/150?u=${product['email']}',
-            name: product['name'] ?? 'No Name',
-            price: ((product['id'] ?? 0) * 3.14 + 15).toStringAsFixed(2),
-          );
+          return ProductCard(product: products[index]);
         },
       ),
     );
   }
 }
 
+/// A reusable widget for displaying a single, clickable product card.
 class ProductCard extends StatelessWidget {
-  // ... same code ...
-  final String imageUrl;
-  final String name;
-  final String price;
-
-  const ProductCard({
-    super.key,
-    required this.imageUrl,
-    required this.name,
-    required this.price,
-  });
+  final Map<String, dynamic> product;
+  const ProductCard({super.key, required this.product});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 160,
-      margin: const EdgeInsets.only(right: 16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    final imageUrl = product['thumbnail_url'];
+
+    final double salePrice = (product['sale_price'] as num?)?.toDouble() ?? 0.0;
+    final double regularPrice = (product['regular_price'] as num?)?.toDouble() ?? 0.0;
+
+    Widget priceWidget;
+
+    if (salePrice > 0 && salePrice < regularPrice) {
+      priceWidget = Row(
+        crossAxisAlignment: CrossAxisAlignment.baseline,
+        textBaseline: TextBaseline.alphabetic,
         children: [
-          Container(
-            height: 160,
-            width: 160,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              color: Colors.grey[200],
-              image: DecorationImage(
-                image: NetworkImage(imageUrl),
-                fit: BoxFit.cover,
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
           Text(
-            name,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+            '\$${salePrice.toStringAsFixed(2)}',
+            style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 16),
           ),
-          const Spacer(),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                '\$$price',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.blue,
-                ),
-              ),
-              CircleAvatar(
-                radius: 15,
-                backgroundColor: Colors.black,
-                child: IconButton(
-                  icon: const Icon(Icons.add, color: Colors.white, size: 15),
-                  onPressed: () {},
-                ),
-              )
-            ],
+          const SizedBox(width: 8),
+          Text(
+            '\$${regularPrice.toStringAsFixed(2)}',
+            style: const TextStyle(decoration: TextDecoration.lineThrough, color: Colors.grey),
           ),
         ],
+      );
+    } else {
+      priceWidget = Text(
+        '\$${regularPrice.toStringAsFixed(2)}',
+        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+      );
+    }
+
+    return Container(
+      width: 160,
+      margin: const EdgeInsets.all(4.0),
+      child: InkWell(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ProductDetailScreen(productSlug: product['slug']),
+            ),
+          );
+        },
+        borderRadius: BorderRadius.circular(10),
+        child: Card(
+          clipBehavior: Clip.antiAlias,
+          elevation: 2,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                height: 120,
+                width: double.infinity,
+                child: (imageUrl != null && imageUrl.isNotEmpty)
+                    ? Image.network(
+                  imageUrl,
+                  fit: BoxFit.cover,
+                  errorBuilder: (c, e, s) => Image.asset('assets/images/default-image.jpg', fit: BoxFit.cover),
+                  loadingBuilder: (context, child, progress) =>
+                  progress == null ? child : const Center(child: CircularProgressIndicator()),
+                )
+                    : Image.asset('assets/images/default-image.jpg', fit: BoxFit.cover),
+              ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        product['name'] ?? 'No Name',
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      priceWidget,
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

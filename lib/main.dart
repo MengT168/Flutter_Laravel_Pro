@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lara_flutter_pro/screens/login_screen.dart';
+import 'package:lara_flutter_pro/screens/main_screen.dart';
 
 void main() {
   runApp(MyApp());
@@ -16,7 +17,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: LoginScreen(),
+      home: const MainScreen(),
     );
   }
 }

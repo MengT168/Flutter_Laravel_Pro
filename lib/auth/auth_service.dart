@@ -439,4 +439,44 @@ class AuthService {
       return null;
     }
   }
+
+  Future<Map<String, dynamic>?> getCurrentUserII() async {
+    final token = await getToken();
+    if (token == null) {
+      return null;
+    }
+
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/user'),
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return null;
+      }
+    } catch (e) {
+      print('Error fetching current user: $e');
+      return null;
+    }
+  }
+  Future<Map<String, dynamic>?> getProductDetail(String slug) async {
+    try {
+      final response = await http.get(Uri.parse('$_baseUrl/products/detail/$slug'));
+      if (response.statusCode == 200) {
+        // The API response has 'product' and 'related_products' inside the 'data' key
+        // But your controller sends them at the top level, so we just return the whole body.
+        return jsonDecode(response.body);
+      }
+      return null;
+    } catch (e) {
+      print('Error fetching product detail: $e');
+      return null;
+    }
+  }
 }

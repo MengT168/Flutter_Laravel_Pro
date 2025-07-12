@@ -20,15 +20,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _fetchUserData();
   }
 
+  /// Fetches user data. If the user is not logged in, the service will return null.
   Future<void> _fetchUserData() async {
+    if (!mounted) return;
     setState(() => _isLoading = true);
-    final user = await _authService.getCurrentUser();
+    final user = await _authService.getCurrentUserII();
     if (mounted) {
       setState(() {
         _user = user;
         _isLoading = false;
       });
     }
+  }
+
+  /// Handles navigating to the login screen and refreshing data upon return.
+  void _navigateToLogin() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        // Pass the new parameter here
+        builder: (context) => const LoginScreen(isFromProfile: true),
+      ),
+    ).then((_) {
+      // After returning from login, refresh the user data
+      _fetchUserData();
+    });
   }
 
   @override
@@ -40,45 +56,76 @@ class _ProfileScreenState extends State<ProfileScreen> {
         elevation: 0,
         foregroundColor: Colors.black,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () async {
-              await _authService.logout();
-              Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(builder: (context) => const LoginScreen()),
-                    (Route<dynamic> route) => false,
-              );
-            },
-          ),
+          // Only show the logout button if the user is logged in
+          if (_user != null)
+            IconButton(
+              icon: const Icon(Icons.logout),
+              tooltip: 'Logout',
+              onPressed: () async {
+                await _authService.logout();
+                // Immediately clear the user data for UI update
+                setState(() {
+                  _user = null;
+                });
+              },
+            ),
         ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
+      // If user is null, show login prompt. Otherwise, show profile.
           : _user == null
-          ? const Center(child: Text('Could not load user profile.'))
+          ? _buildLoginPrompt()
           : _buildProfileView(),
     );
   }
 
+  /// A widget to show when the user is not logged in.
+  Widget _buildLoginPrompt() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.person_off_outlined,
+            size: 80,
+            color: Colors.grey.shade400,
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'You are not logged in.',
+            style: TextStyle(fontSize: 18, color: Colors.grey),
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton(
+            onPressed: _navigateToLogin,
+            child: const Text('Login or Register'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// The widget to show the user's profile information.
   Widget _buildProfileView() {
     final name = _user!['name'] ?? 'N/A';
     final email = _user!['email'] ?? 'N/A';
-    final phone = _user!['phone'] ?? '+65 2311 333'; // Example placeholder
-    final dob = _user!['dob'] ?? '20/05/1990';      // Example placeholder
-    final address = _user!['address'] ?? '123 Royal Street, New York'; // Example placeholder
 
-    return ListView(
-      padding: const EdgeInsets.symmetric(horizontal: 24.0),
-      children: [
-        const SizedBox(height: 20),
-        _buildProfileAvatar(),
-        const SizedBox(height: 40),
-        _buildInfoRow('Username', name),
-        _buildInfoRow('Email', email),
-        _buildInfoRow('Phone', phone),
-        _buildInfoRow('Date of birth', dob),
-        _buildInfoRow('Address', address),
-      ],
+    return RefreshIndicator(
+      onRefresh: _fetchUserData,
+      child: ListView(
+        padding: const EdgeInsets.symmetric(horizontal: 24.0),
+        children: [
+          const SizedBox(height: 20),
+          _buildProfileAvatar(),
+          const SizedBox(height: 40),
+          _buildInfoRow('Username', name),
+          _buildInfoRow('Email', email),
+          _buildInfoRow('Phone', 'Not Provided'),
+          _buildInfoRow('Date of birth', 'Not Provided'),
+          _buildInfoRow('Address', 'Not Provided'),
+        ],
+      ),
     );
   }
 
@@ -89,7 +136,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           CircleAvatar(
             radius: 60,
             backgroundImage: NetworkImage(
-              // Using a placeholder image, replace with user's actual avatar URL if available
               'https://i.pravatar.cc/150?u=${_user!['email']}',
             ),
           ),
@@ -101,9 +147,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               backgroundColor: Colors.teal.shade300,
               child: IconButton(
                 icon: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
-                onPressed: () {
-                  // TODO: Implement image picker logic
-                },
+                onPressed: () {},
               ),
             ),
           ),
@@ -118,21 +162,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: const TextStyle(
-              color: Colors.grey,
-              fontSize: 16,
-            ),
-          ),
-          Text(
-            value,
-            style: const TextStyle(
-              color: Colors.black87,
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
+          Text(label, style: const TextStyle(color: Colors.grey, fontSize: 16)),
+          Text(value, style: const TextStyle(color: Colors.black87, fontSize: 16, fontWeight: FontWeight.w500)),
         ],
       ),
     );

@@ -5,7 +5,10 @@ import 'package:lara_flutter_pro/screens/register_screen.dart';
 import '../auth/auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  // This parameter tells the screen how it was opened.
+  final bool isFromProfile;
+
+  const LoginScreen({super.key, this.isFromProfile = false});
 
   @override
   _LoginScreenState createState() => _LoginScreenState();
@@ -16,38 +19,47 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   final _authService = AuthService();
   bool _isPasswordVisible = false;
+  bool _isLoggingIn = false;
 
   void _login() async {
-    // Show a loading indicator
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) => const Center(child: CircularProgressIndicator()),
-    );
+    if (_isLoggingIn) return; // Prevent multiple login attempts
+    setState(() => _isLoggingIn = true);
 
-    // Call the login service
+    // No need for a separate dialog, we can show a loading indicator on the button
+
     final Map<String, dynamic>? loginData = await _authService.login(
       _nameController.text,
       _passwordController.text,
     );
 
-    // Dismiss the loading indicator
+    // Re-enable the button
     if (mounted) {
-      Navigator.pop(context);
+      setState(() => _isLoggingIn = false);
     }
 
     if (loginData != null) {
-      // Safely check if the 'is_admin' value is the boolean true
-      if (loginData['is_admin'] == true) {
-        // Navigate to Admin Dashboard
+      final bool isAdmin = loginData['is_admin'] == true;
+
+      // Highest priority: If the user is an admin, always go to the dashboard.
+      if (isAdmin) {
         if (mounted) {
-          Navigator.pushReplacement(
+          Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(builder: (context) => const DashboardScreen()),
+                (Route<dynamic> route) => false, // This removes all previous screens
           );
         }
+        return; // Stop the function here
+      }
+
+      // If not an admin, check if we came from the profile screen.
+      if (widget.isFromProfile) {
+        if (mounted) {
+          // Go back to the profile screen that is waiting.
+          Navigator.pop(context);
+        }
       } else {
-        // Navigate to Normal User Home Screen
+        // Fallback for a normal user logging in for the first time.
         if (mounted) {
           Navigator.pushReplacement(
             context,
@@ -56,8 +68,7 @@ class _LoginScreenState extends State<LoginScreen> {
         }
       }
     } else {
-      // Show login failed SnackBar
-      if (mounted) {
+      if(mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Login Failed. Please check your credentials.'),
@@ -79,22 +90,17 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Your login UI
                 Image.asset('assets/images/login.jpg', height: 200),
                 const SizedBox(height: 32),
                 const Text('Login', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
                 const Text('Please Sign in to continue.', style: TextStyle(fontSize: 16, color: Colors.grey)),
                 const SizedBox(height: 32),
-
-                // Name TextField
                 TextField(
                   controller: _nameController,
                   decoration: _buildInputDecoration('Name', Icons.person_outline),
                 ),
                 const SizedBox(height: 16),
-
-                // Password TextField
                 TextField(
                   controller: _passwordController,
                   obscureText: !_isPasswordVisible,
@@ -106,20 +112,18 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 24),
-
-                // Sign In Button
                 ElevatedButton(
-                  onPressed: _login,
+                  onPressed: _isLoggingIn ? null : _login, // Disable button while logging in
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     backgroundColor: const Color(0xFF1E232C),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                  child: const Text('Sign in', style: TextStyle(fontSize: 18, color: Colors.white)),
+                  child: _isLoggingIn
+                      ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : const Text('Sign in', style: TextStyle(fontSize: 18, color: Colors.white)),
                 ),
                 const SizedBox(height: 24),
-
-                // Register Navigation
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -138,7 +142,6 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // Helper method for styling TextFields
   InputDecoration _buildInputDecoration(String labelText, IconData prefixIcon) {
     return InputDecoration(
       labelText: labelText,

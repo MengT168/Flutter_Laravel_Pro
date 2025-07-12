@@ -42,8 +42,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
             TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
             TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Delete', style: TextStyle(color: Colors.red))),
           ],
-        )
-    );
+        ));
 
     if (confirmed == true) {
       final success = await _authService.deleteProduct(id);
@@ -55,6 +54,36 @@ class _ProductListScreenState extends State<ProductListScreen> {
     }
   }
 
+  // Helper widget to build the correct price display
+  Widget _buildPriceCell(Map<String, dynamic> product) {
+    final double salePrice = (product['sale_price'] as num?)?.toDouble() ?? 0.0;
+    final double regularPrice = (product['regular_price'] as num?)?.toDouble() ?? 0.0;
+
+    if (salePrice > 0 && salePrice < regularPrice) {
+      // If on sale, show both prices
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            '\$${salePrice.toStringAsFixed(2)}',
+            style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+          ),
+          Text(
+            '\$${regularPrice.toStringAsFixed(2)}',
+            style: const TextStyle(decoration: TextDecoration.lineThrough, color: Colors.grey, fontSize: 12),
+          ),
+        ],
+      );
+    } else {
+      // If not on sale, show only the regular price
+      return Text(
+        '\$${regularPrice.toStringAsFixed(2)}',
+        style: const TextStyle(fontWeight: FontWeight.bold),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -63,8 +92,8 @@ class _ProductListScreenState extends State<ProductListScreen> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView( // For vertical scrolling
-        child: SingleChildScrollView( // For horizontal scrolling
+          : SingleChildScrollView(
+        child: SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: DataTable(
             columns: const [
@@ -81,8 +110,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
                 DataCell(
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 4.0),
-                    // This logic checks if the URL is valid, otherwise it shows the default asset image
-                    child: (imageUrl != null && imageUrl.isNotEmpty)
+                    child: (imageUrl != null && imageUrl.isNotEmpty && !imageUrl.endsWith('uploads'))
                         ? Image.network(
                       imageUrl,
                       width: 50,
@@ -90,16 +118,13 @@ class _ProductListScreenState extends State<ProductListScreen> {
                       fit: BoxFit.cover,
                       errorBuilder: (context, error, stack) => Image.asset('assets/images/default-image.jpg', width: 50, height: 50),
                     )
-                        : Image.asset('assets/images/placeholder.png', width: 50, height: 50),
+                        : Image.asset('assets/images/default-image.jpg', width: 50, height: 50),
                   ),
                 ),
-                // Name Cell
-                DataCell(Text(product['name'] ?? 'No Name')),
-                // Price Cell
-                DataCell(Text('\$${product['sale_price']}')),
-                // Quantity Cell
+                DataCell(SizedBox(width: 150, child: Text(product['name'] ?? 'No Name', overflow: TextOverflow.ellipsis, maxLines: 2))),
+                // ** THE FIX: Call the helper method here **
+                DataCell(_buildPriceCell(product)),
                 DataCell(Text(product['quantity'].toString())),
-                // Actions Cell
                 DataCell(
                   Row(
                     children: [
