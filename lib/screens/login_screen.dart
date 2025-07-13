@@ -5,10 +5,11 @@ import 'package:lara_flutter_pro/screens/register_screen.dart';
 import '../auth/auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
-  // This parameter tells the screen how it was opened.
-  final bool isFromProfile;
+  /// If true, the screen will pop back on a successful login, returning 'true'.
+  /// If false (default), it will navigate to the main app screen.
+  final bool isPoppingOnSuccess;
 
-  const LoginScreen({super.key, this.isFromProfile = false});
+  const LoginScreen({super.key, this.isPoppingOnSuccess = false});
 
   @override
   _LoginScreenState createState() => _LoginScreenState();
@@ -22,23 +23,23 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoggingIn = false;
 
   void _login() async {
-    if (_isLoggingIn) return; // Prevent multiple login attempts
+    // Prevent multiple clicks while logging in
+    if (_isLoggingIn) return;
     setState(() => _isLoggingIn = true);
 
-    // No need for a separate dialog, we can show a loading indicator on the button
-
-    final Map<String, dynamic>? loginData = await _authService.login(
+    final Map<String, dynamic>? userData = await _authService.login(
       _nameController.text,
       _passwordController.text,
     );
 
-    // Re-enable the button
+    // Re-enable the button after the API call is complete
     if (mounted) {
       setState(() => _isLoggingIn = false);
     }
 
-    if (loginData != null) {
-      final bool isAdmin = loginData['is_admin'] == true;
+    if (userData != null) {
+      // THE FIX: Correctly check for the boolean 'true'
+      final bool isAdmin = userData['is_admin'] == true;
 
       // Highest priority: If the user is an admin, always go to the dashboard.
       if (isAdmin) {
@@ -49,14 +50,15 @@ class _LoginScreenState extends State<LoginScreen> {
                 (Route<dynamic> route) => false, // This removes all previous screens
           );
         }
-        return; // Stop the function here
+        return; // Stop the function here.
       }
 
-      // If not an admin, check if we came from the profile screen.
-      if (widget.isFromProfile) {
+      // If not an admin, check how this screen was opened.
+      if (widget.isPoppingOnSuccess) {
         if (mounted) {
-          // Go back to the profile screen that is waiting.
-          Navigator.pop(context);
+          // Go back to the screen that opened it (e.g., ProductDetailScreen)
+          // and return 'true' to indicate success.
+          Navigator.pop(context, true);
         }
       } else {
         // Fallback for a normal user logging in for the first time.
@@ -68,7 +70,7 @@ class _LoginScreenState extends State<LoginScreen> {
         }
       }
     } else {
-      if(mounted) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Login Failed. Please check your credentials.'),
@@ -82,11 +84,18 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        // Only show a back button if this screen was pushed on top of another
+        automaticallyImplyLeading: widget.isPoppingOnSuccess,
+        backgroundColor: Colors.white,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.black),
+      ),
       backgroundColor: Colors.white,
       body: SafeArea(
         child: SingleChildScrollView(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
+            padding: const EdgeInsets.fromLTRB(24.0, 0, 24.0, 32.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [

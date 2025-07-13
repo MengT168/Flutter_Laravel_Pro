@@ -4,7 +4,14 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:image_picker/image_picker.dart';
 
-class AuthService {
+class AuthService with ChangeNotifier {
+
+  AuthService._privateConstructor();
+  static final AuthService _instance = AuthService._privateConstructor();
+  factory AuthService() {
+    return _instance;
+  }
+
 
   final String _baseUrl = kIsWeb
       ? 'http://127.0.0.1:8000/api'   // Use this for Web
@@ -34,32 +41,44 @@ class AuthService {
     }
   }
 
-  // Future<bool> login(String name, String password) async {
+
+  // Future<Map<String, dynamic>?> login(String name, String password) async {
   //   try {
   //     final response = await http.post(
   //       Uri.parse('$_baseUrl/loginSubmit'),
-  //       headers: <String, String>{
+  //       headers: {
   //         'Content-Type': 'application/json; charset=UTF-8',
+  //         'Accept': 'application/json',
   //       },
-  //       body: jsonEncode(<String, String>{
-  //         'name': name,
-  //         'password': password,
-  //       }),
+  //       body: jsonEncode({'name': name, 'password': password}),
   //     );
   //
   //     if (response.statusCode == 200) {
   //       final data = jsonDecode(response.body);
+  //       print('RAW API RESPONSE FOR LOGIN: $data');
+  //
+  //       // 3. Check for the access_token from your API response
   //       if (data['access_token'] != null) {
   //         await _storeToken(data['access_token']);
-  //         return true;
+  //
+  //         final bool isAdmin = data['is_admin'] == 1;
+  //
+  //         return {'name': data['username'], 'is_admin': isAdmin};
   //       }
   //     }
-  //     return false;
+  //     print('Login failed with status: ${response.statusCode}');
+  //     print('Response: ${response.body}');
+  //     return null;
   //   } catch (e) {
   //     print('Error during login: $e');
-  //     return false;
+  //     return null;
   //   }
   // }
+
+  Map<String, dynamic>? _currentUser;
+  Map<String, dynamic>? get user => _currentUser;
+
+  // In auth/auth_service.dart
 
   Future<Map<String, dynamic>?> login(String name, String password) async {
     try {
@@ -74,22 +93,56 @@ class AuthService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        print('RAW API RESPONSE FOR LOGIN: $data');
 
-        // 3. Check for the access_token from your API response
         if (data['access_token'] != null) {
           await _storeToken(data['access_token']);
 
-          final bool isAdmin = data['is_admin'] == 1;
+          // Safely check the admin status
+          final dynamic adminValue = data['is_admin'];
+          final bool isAdmin = (adminValue == 1 || adminValue == true);
 
-          return {'name': data['username'], 'is_admin': isAdmin};
+          // Create the user map that the rest of the app will use
+          final userMap = {
+            'id': data['id'], // Make sure your API sends the user's ID
+            'name': data['username'],
+            'is_admin': isAdmin,
+            // You can add 'email' here too if your API sends it
+          };
+
+          // THE FIX: Save the user data to the service
+          _currentUser = userMap;
+
+          notifyListeners();
+
+          return userMap;
         }
       }
+
       print('Login failed with status: ${response.statusCode}');
       print('Response: ${response.body}');
       return null;
+
     } catch (e) {
       print('Error during login: $e');
+      return null;
+    }
+  }
+
+  Future<Map<String, dynamic>?> getCurrentUsers() async {
+    final token = await getToken();
+    if (token == null) return null;
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/user'),
+        headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
+      );
+      if (response.statusCode == 200) {
+        _currentUser = jsonDecode(response.body);
+        notifyListeners();
+        return _currentUser;
+      }
+      return null;
+    } catch (e) {
       return null;
     }
   }
@@ -107,6 +160,8 @@ class AuthService {
   Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('auth_token');
+    _currentUser = null;
+    notifyListeners();
   }
 
   Future<List<dynamic>> getUsers() async {
@@ -440,37 +495,11 @@ class AuthService {
     }
   }
 
-  Future<Map<String, dynamic>?> getCurrentUserII() async {
-    final token = await getToken();
-    if (token == null) {
-      return null;
-    }
-
-    try {
-      final response = await http.get(
-        Uri.parse('$_baseUrl/user'),
-        headers: {
-          'Accept': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
-
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body);
-      } else {
-        return null;
-      }
-    } catch (e) {
-      print('Error fetching current user: $e');
-      return null;
-    }
-  }
   Future<Map<String, dynamic>?> getProductDetail(String slug) async {
     try {
       final response = await http.get(Uri.parse('$_baseUrl/products/detail/$slug'));
       if (response.statusCode == 200) {
-        // The API response has 'product' and 'related_products' inside the 'data' key
-        // But your controller sends them at the top level, so we just return the whole body.
+
         return jsonDecode(response.body);
       }
       return null;
@@ -479,4 +508,74 @@ class AuthService {
       return null;
     }
   }
+
+  Future<bool> addToCart(int productId, int quantity) async {
+    if (user == null) return false;
+    final token = await getToken();
+    if (token == null) return false;
+
+    final response = await http.post(
+      Uri.parse('$_baseUrl/cart/add'),
+      headers: {'Accept': 'application/json', 'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+      body: jsonEncode({'userId': user!['id'], 'proId': productId, 'qty': quantity}),
+    );
+
+    print('ADD TO CART STATUS CODE: ${response.statusCode}');
+    print('ADD TO CART RESPONSE BODY: ${response.body}');
+
+    return response.statusCode == 200;
+  }
+
+  Future<Map<String, dynamic>?> getCartItems() async {
+    if (user == null) return null;
+    final token = await getToken();
+    if (token == null) return null;
+
+    final response = await http.get(
+      Uri.parse('$_baseUrl/cart/items?userId=${user!['id']}'),
+      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+    return null;
+  }
+
+  Future<bool> placeOrder({required String phone, required String address}) async {
+    if (user == null) return false;
+    final token = await getToken();
+    if (token == null) return false;
+
+    final response = await http.post(
+      Uri.parse('$_baseUrl/place-order'),
+      headers: {'Accept': 'application/json', 'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+      body: jsonEncode({
+        'userId': user!['id'],
+        'phone': phone,
+        'address': address,
+      }),
+    );
+    return response.statusCode == 200;
+  }
+
+  Future<bool> removeCartItem(int cartItemId) async {
+    final token = await getToken();
+    if (token == null) return false;
+
+    final response = await http.get(
+      Uri.parse('$_baseUrl/cart-item/$cartItemId'),
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    print('DELETE ITEM STATUS CODE: ${response.statusCode}');
+    print('DELETE ITEM RESPONSE BODY: ${response.body}');
+
+    return response.statusCode == 200;
+  }
 }
+
+

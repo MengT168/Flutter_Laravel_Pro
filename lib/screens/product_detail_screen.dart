@@ -1,6 +1,9 @@
+
+
 import 'package:flutter/material.dart';
 import '../auth/auth_service.dart';
-import 'home_screen.dart'; // Re-using the ProductCard for related products
+import 'home_screen.dart';
+import 'login_screen.dart';
 
 class ProductDetailScreen extends StatefulWidget {
   final String productSlug;
@@ -14,8 +17,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   final AuthService _authService = AuthService();
   Map<String, dynamic>? _productData;
   bool _isLoading = true;
+  bool _isAddingToCart = false;
 
-  // State for selections
   final List<int> _selectedSizeIds = [];
   final List<int> _selectedColorIds = [];
   int _quantity = 1;
@@ -40,16 +43,51 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     }
   }
 
+  Future<void> _addToCart() async {
+    if (_isAddingToCart) return;
+
+    // 1. Check if user is logged in
+    if (_authService.user == null) {
+      // 2. If not, navigate to LoginScreen and WAIT for a result.
+      final bool? loggedInSuccessfully = await Navigator.push<bool>(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginScreen(isPoppingOnSuccess: true)),
+      );
+
+      // 3. If the user did not log in successfully, stop.
+      if (loggedInSuccessfully != true) {
+        _showSnackbar('You must be logged in to add items to your cart.', false);
+        return;
+      }
+    }
+
+    setState(() => _isAddingToCart = true);
+
+    // 4. Now the user is logged in, proceed to add to cart
+    final productId = _productData!['product']['id'];
+    final success = await _authService.addToCart(productId, _quantity);
+
+    if (mounted) {
+      setState(() => _isAddingToCart = false);
+      _showSnackbar(
+        success ? 'Added to cart!' : 'Failed to add item to cart.',
+        success,
+      );
+    }
+  }
+
+  void _showSnackbar(String message, bool isSuccess) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(message),
+      backgroundColor: isSuccess ? Colors.green : Colors.red,
+    ));
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_isLoading ? 'Loading...' : _productData?['product']?['name'] ?? 'Product Detail'),
-        actions: [
-          IconButton(onPressed: () {}, icon: const Icon(Icons.share)),
-          IconButton(onPressed: () {}, icon: const Icon(Icons.favorite_border)),
-        ],
-      ),
+      appBar: AppBar(title: Text(_isLoading ? 'Loading...' : _productData?['product']?['name'] ?? 'Product Detail')),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _productData == null
@@ -67,15 +105,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Product Image
-          if (product['thumbnail_url'] != null)
-            Image.network(
-              product['thumbnail_url'],
-              height: 300,
-              width: double.infinity,
-              fit: BoxFit.cover,
-              errorBuilder: (c, e, s) => Image.asset('assets/images/default-image.jpg', fit: BoxFit.cover, height: 300),
-            )
+          if (product['thumbnail_url'] != null && (product['thumbnail_url'] as String).isNotEmpty)
+            Image.network(product['thumbnail_url'], height: 300, width: double.infinity, fit: BoxFit.cover, errorBuilder: (c, e, s) => Image.asset('assets/images/default-image.jpg', fit: BoxFit.cover, height: 300))
           else
             Image.asset('assets/images/default-image.jpg', fit: BoxFit.cover, height: 300),
 
@@ -84,57 +115,44 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Product Name
                 Text(product['name'], style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
-
-                // Price
                 _buildPriceWidget(product),
                 const SizedBox(height: 24),
-
-                // Attribute Selectors for Size and Color
                 if (attributes['Size'] != null)
                   _buildAttributeSelector('Size', attributes['Size'], _selectedSizeIds),
                 if (attributes['Color'] != null)
                   _buildAttributeSelector('Color', attributes['Color'], _selectedColorIds),
-
                 const SizedBox(height: 16),
-
-                // Quantity Selector
                 _buildQuantitySelector(),
                 const SizedBox(height: 24),
-
-                // Description
                 const Text('Description', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
                 Text(product['description'] ?? 'No description available.', style: const TextStyle(color: Colors.black54, height: 1.5)),
-
                 const SizedBox(height: 24),
-
-                // Add to Cart Button
                 SizedBox(
                   width: double.infinity,
                   height: 50,
-                  child: ElevatedButton(onPressed: () {}, child: const Text('Add to Cart')),
+                  child: ElevatedButton(
+                    onPressed: _isAddingToCart ? null : _addToCart,
+                    child: _isAddingToCart
+                        ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        : const Text('Add to Cart'),
+                  ),
                 ),
-
                 const SizedBox(height: 32),
                 const Text('Related Products', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
               ],
             ),
           ),
-
-          // Related Products Carousel
           SizedBox(
             height: 240,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.only(left: 12),
               itemCount: relatedProducts.length,
-              itemBuilder: (context, index) {
-                return ProductCard(product: relatedProducts[index]);
-              },
+              itemBuilder: (context, index) => ProductCard(product: relatedProducts[index]),
             ),
           ),
           const SizedBox(height: 20),

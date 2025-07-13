@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
-import 'home_screen.dart';
-import 'placeholder_screen.dart';
-import 'profile_screen.dart';
+import 'package:lara_flutter_pro/auth/auth_service.dart';
+import 'package:lara_flutter_pro/screens/cart_screen.dart';
+import 'package:lara_flutter_pro/screens/home_screen.dart';
+import 'package:lara_flutter_pro/screens/placeholder_screen.dart';
+import 'package:lara_flutter_pro/screens/profile_screen.dart';
+import 'package:provider/provider.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -12,11 +15,31 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
+  bool _isInitializing = true;
 
+  @override
+  void initState() {
+    super.initState();
+    _initializeUser();
+  }
+
+  // This function runs when the app starts to load a saved user session.
+  Future<void> _initializeUser() async {
+    // We use context.read because we are in initState and only need to call this once.
+    await context.read<AuthService>().getCurrentUsers();
+
+    if (mounted) {
+      setState(() {
+        _isInitializing = false;
+      });
+    }
+  }
+
+  // The list of screens for your bottom navigation bar.
   static const List<Widget> _widgetOptions = <Widget>[
     HomeScreen(),
-    PlaceholderScreen(title: 'Search'),
-    PlaceholderScreen(title: 'Cart'),
+    PlaceholderScreen(title: 'Categories'), // You can build this screen later
+    CartScreen(),
     ProfileScreen(),
   ];
 
@@ -28,6 +51,15 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Show a loading screen while we check for a logged-in user.
+    if (_isInitializing) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
     return Scaffold(
       body: IndexedStack(
         index: _selectedIndex,
@@ -35,33 +67,16 @@ class _MainScreenState extends State<MainScreen> {
       ),
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            activeIcon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.search_outlined),
-            activeIcon: Icon(Icons.search),
-            label: 'Search',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.shopping_cart_outlined),
-            activeIcon: Icon(Icons.shopping_cart),
-            label: 'Cart',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            activeIcon: Icon(Icons.person),
-            label: 'Profile',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.category_outlined), activeIcon: Icon(Icons.category), label: 'Order'),
+          BottomNavigationBarItem(icon: Icon(Icons.shopping_cart_outlined), activeIcon: Icon(Icons.shopping_cart), label: 'Cart'),
+          BottomNavigationBarItem(icon: Icon(Icons.person_outline), activeIcon: Icon(Icons.person), label: 'Profile'),
         ],
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
         type: BottomNavigationBarType.fixed,
-        selectedItemColor: Colors.blue.shade800,
+        selectedItemColor: Theme.of(context).colorScheme.primary,
         unselectedItemColor: Colors.grey,
-        showUnselectedLabels: true,
       ),
     );
   }
