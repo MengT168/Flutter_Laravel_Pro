@@ -12,32 +12,24 @@ class CartScreen extends StatefulWidget {
 }
 
 class _CartScreenState extends State<CartScreen> {
-  Map<String, dynamic>? _cartData;
   bool _isLoading = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // This is triggered when the widget is first built and when the user logs in.
     final authService = context.watch<AuthService>();
-    if (authService.user != null && _cartData == null) {
+    if (authService.user != null && authService.cartData == null && !_isLoading) {
       _fetchCartItems();
     }
   }
 
   Future<void> _fetchCartItems() async {
-    // We use context.read here because it's in a function, not the build method.
     final authService = context.read<AuthService>();
     if (authService.user == null) return;
 
     if (mounted) setState(() => _isLoading = true);
-    final data = await authService.getCartItems();
-    if (mounted) {
-      setState(() {
-        _cartData = data;
-        _isLoading = false;
-      });
-    }
+    await authService.getCartItems();
+    if (mounted) setState(() => _isLoading = false);
   }
 
   void _showSnackbar(String message, bool isSuccess) {
@@ -48,7 +40,6 @@ class _CartScreenState extends State<CartScreen> {
     ));
   }
 
-  /// Handles deleting an item from the cart after confirmation.
   void _removeItem(int cartItemId) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -69,30 +60,14 @@ class _CartScreenState extends State<CartScreen> {
       final success = await context.read<AuthService>().removeCartItem(cartItemId);
       _showSnackbar('Item removed ${success ? 'successfully' : 'failed'}', success);
       if (success) {
-        _fetchCartItems(); // Refresh the cart list
+        _fetchCartItems();
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // This line "watches" AuthService. When user logs in/out, this screen will rebuild.
     final authService = context.watch<AuthService>();
-
-    // If the user logs in, authService.user will no longer be null, triggering a rebuild
-    // and this condition will fetch the cart.
-    if (authService.user != null && _cartData == null && !_isLoading) {
-      _fetchCartItems();
-    }
-    // If a user logs out, we clear the old cart data.
-    if (authService.user == null && _cartData != null) {
-      // Use a post-frame callback to avoid calling setState during a build.
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        setState(() {
-          _cartData = null;
-        });
-      });
-    }
 
     return Scaffold(
       appBar: AppBar(
@@ -112,16 +87,15 @@ class _CartScreenState extends State<CartScreen> {
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
-    if (_cartData == null || (_cartData!['items'] as List).isEmpty) {
+    if (authService.cartData == null || (authService.cartData!['items'] as List).isEmpty) {
       return _buildEmptyCart();
     }
-    return _buildCartView();
+    return _buildCartView(authService.cartData!);
   }
 
-  /// The main view when the cart has items.
-  Widget _buildCartView() {
-    final items = _cartData!['items'] as List;
-    final totalAmount = _cartData!['total_amount'] as num? ?? 0.0;
+  Widget _buildCartView(Map<String, dynamic> cartData) {
+    final items = cartData['items'] as List;
+    final totalAmount = cartData['total_amount'] as num? ?? 0.0;
 
     return Column(
       children: [
@@ -155,7 +129,8 @@ class _CartScreenState extends State<CartScreen> {
             ClipRRect(
               borderRadius: BorderRadius.circular(8.0),
               child: (imageUrl != null && imageUrl.isNotEmpty)
-                  ? Image.asset('assets/images/default-image.jpg', width: 80, height: 80, fit: BoxFit.cover)
+                  ? Image.network(imageUrl, width: 80, height: 80, fit: BoxFit.cover,
+                  errorBuilder: (c, e, s) => Image.asset('assets/images/default-image.jpg', width: 80, height: 80, fit: BoxFit.cover))
                   : Image.asset('assets/images/default-image.jpg', width: 80, height: 80, fit: BoxFit.cover),
             ),
             const SizedBox(width: 12),
@@ -181,9 +156,9 @@ class _CartScreenState extends State<CartScreen> {
             ),
             Row(
               children: [
-                IconButton(icon: const Icon(Icons.remove_circle_outline, size: 22, color: Colors.grey), onPressed: () {/* TODO: Implement decrease qty API call */} ),
+                IconButton(icon: const Icon(Icons.remove_circle_outline, size: 22, color: Colors.grey), onPressed: () {/* TODO: decrease qty */}),
                 Text('${item['quantity']}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                IconButton(icon: const Icon(Icons.add_circle_outline, size: 22), onPressed: () {/* TODO: Implement increase qty API call */} ),
+                IconButton(icon: const Icon(Icons.add_circle_outline, size: 22), onPressed: () {/* TODO: increase qty */}),
               ],
             )
           ],
@@ -193,7 +168,7 @@ class _CartScreenState extends State<CartScreen> {
   }
 
   Widget _buildSummaryCard(double total) {
-    const double shipping = 5.00; // Example shipping fee
+    const double shipping = 5.00;
     return Card(
       margin: const EdgeInsets.all(0),
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),

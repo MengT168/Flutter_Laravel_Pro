@@ -105,7 +105,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
             ],
             rows: _products.map((product) {
               final imageUrl = product['thumbnail_url'];
-
+              print(imageUrl);
               return DataRow(cells: [
                 DataCell(
                   Padding(

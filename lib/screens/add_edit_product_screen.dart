@@ -2,11 +2,10 @@ import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
 import '../auth/auth_service.dart';
 
 class AddEditProductScreen extends StatefulWidget {
-  // If a product is passed, we are in "Edit" mode.
-  // If it's null, we are in "Add" mode.
   final Map<String, dynamic>? product;
   const AddEditProductScreen({super.key, this.product});
 
@@ -16,24 +15,20 @@ class AddEditProductScreen extends StatefulWidget {
 
 class _AddEditProductScreenState extends State<AddEditProductScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _authService = AuthService();
   final _picker = ImagePicker();
 
-  // Controllers for text fields
   late TextEditingController _nameController;
   late TextEditingController _qtyController;
   late TextEditingController _regularPriceController;
   late TextEditingController _salePriceController;
   late TextEditingController _descriptionController;
 
-  // State for selections
   int? _selectedCategoryId;
   final List<int> _selectedSizeIds = [];
   final List<int> _selectedColorIds = [];
   XFile? _selectedImage;
   String? _existingImageUrl;
 
-  // Data from API
   List<dynamic> _categories = [];
   List<dynamic> _sizes = [];
   List<dynamic> _colors = [];
@@ -48,6 +43,16 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     _loadInitialData();
   }
 
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _qtyController.dispose();
+    _regularPriceController.dispose();
+    _salePriceController.dispose();
+    _descriptionController.dispose();
+    super.dispose();
+  }
+
   void _initializeControllers() {
     final isEditing = widget.product != null;
     _nameController = TextEditingController(text: isEditing ? widget.product!['name'] : '');
@@ -59,28 +64,26 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
 
   Future<void> _loadInitialData() async {
     setState(() => _isLoading = true);
+    final authService = context.read<AuthService>();
     try {
       final results = await Future.wait([
-        _authService.getCategories(),
-        _authService.getAttributes(),
+        authService.getCategories(),
+        authService.getAttributes(),
       ]);
-
       if (mounted) {
         setState(() {
           _categories = results[0];
           final allAttributes = results[1];
           _sizes = allAttributes.where((attr) => attr['type'].toLowerCase() == 'size').toList();
           _colors = allAttributes.where((attr) => attr['type'].toLowerCase() == 'color').toList();
-
           if (widget.product != null) {
             _selectedCategoryId = widget.product!['category'];
             _existingImageUrl = widget.product!['thumbnail_url'];
-
             final attributes = widget.product!['attributes'];
-            if(attributes['Size'] != null) {
+            if(attributes?['Size'] != null) {
               _selectedSizeIds.addAll((attributes['Size'] as List).map((e) => e['id'] as int));
             }
-            if(attributes['Color'] != null) {
+            if(attributes?['Color'] != null) {
               _selectedColorIds.addAll((attributes['Color'] as List).map((e) => e['id'] as int));
             }
           }
@@ -96,20 +99,19 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
   Future<void> _pickImage() async {
     final XFile? image = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
     if(image != null) {
-      setState(() {
-        _selectedImage = image;
-      });
+      setState(() => _selectedImage = image);
     }
   }
 
   Future<void> _submitForm() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate() || _isSaving) return;
     if (_selectedCategoryId == null) {
       _showSnackbar('Please select a category.', false);
       return;
     }
 
     setState(() => _isSaving = true);
+    final authService = context.read<AuthService>();
 
     final fields = {
       'name': _nameController.text,
@@ -120,22 +122,18 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
       'category': _selectedCategoryId.toString(),
     };
 
-    final sizeIds = _selectedSizeIds.map((id) => id.toString()).toList();
-    final colorIds = _selectedColorIds.map((id) => id.toString()).toList();
-
     bool success;
     if (widget.product != null) {
-      success = await _authService.updateProduct(widget.product!['id'], fields, sizeIds, colorIds, _selectedImage);
+      success = await authService.updateProduct(widget.product!['id'], fields, _selectedSizeIds, _selectedColorIds, _selectedImage);
     } else {
-      success = await _authService.addProduct(fields, sizeIds, colorIds, _selectedImage);
+      success = await authService.addProduct(fields, _selectedSizeIds, _selectedColorIds, _selectedImage);
     }
 
-    setState(() => _isSaving = false);
-
     if(mounted) {
+      setState(() => _isSaving = false);
       _showSnackbar('Product ${widget.product != null ? 'updated' : 'added'} ${success ? 'successfully' : 'failed'}', success);
       if (success) {
-        Navigator.pop(context, true); // Return true to indicate success
+        Navigator.pop(context, true);
       }
     }
   }
@@ -167,41 +165,33 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16.0),
           children: [
-            // Image Picker Section
             _buildImagePicker(),
+            const SizedBox(height: 24),
+            TextFormField(controller: _nameController, decoration: const InputDecoration(labelText: 'Product Name', border: OutlineInputBorder()), validator: (v) => v!.isEmpty ? 'Required field' : null),
             const SizedBox(height: 16),
-
-            TextFormField(controller: _nameController, decoration: const InputDecoration(labelText: 'Product Name'), validator: (v) => v!.isEmpty ? 'Required field' : null),
-            const SizedBox(height: 8),
-            TextFormField(controller: _qtyController, decoration: const InputDecoration(labelText: 'Quantity'), keyboardType: TextInputType.number, validator: (v) => v!.isEmpty ? 'Required field' : null),
-            const SizedBox(height: 8),
-            TextFormField(controller: _regularPriceController, decoration: const InputDecoration(labelText: 'Regular Price'), keyboardType: TextInputType.number, validator: (v) => v!.isEmpty ? 'Required field' : null),
-            const SizedBox(height: 8),
-            TextFormField(controller: _salePriceController, decoration: const InputDecoration(labelText: 'Sale Price'), keyboardType: TextInputType.number, validator: (v) => v!.isEmpty ? 'Required field' : null),
-            const SizedBox(height: 8),
-
-            // Category Dropdown
+            TextFormField(controller: _qtyController, decoration: const InputDecoration(labelText: 'Quantity', border: OutlineInputBorder()), keyboardType: TextInputType.number, validator: (v) => v!.isEmpty ? 'Required field' : null),
+            const SizedBox(height: 16),
+            TextFormField(controller: _regularPriceController, decoration: const InputDecoration(labelText: 'Regular Price', border: OutlineInputBorder()), keyboardType: const TextInputType.numberWithOptions(decimal: true), validator: (v) => v!.isEmpty ? 'Required field' : null),
+            const SizedBox(height: 16),
+            TextFormField(controller: _salePriceController, decoration: const InputDecoration(labelText: 'Sale Price (0 if not on sale)', border: OutlineInputBorder()), keyboardType: const TextInputType.numberWithOptions(decimal: true), validator: (v) => v!.isEmpty ? 'Required field' : null),
+            const SizedBox(height: 16),
             DropdownButtonFormField<int>(
               value: _selectedCategoryId,
               items: _categories.map<DropdownMenuItem<int>>((cat) => DropdownMenuItem<int>(value: cat['id'], child: Text(cat['name']))).toList(),
               onChanged: (value) => setState(() => _selectedCategoryId = value),
-              decoration: const InputDecoration(labelText: 'Category'),
+              decoration: const InputDecoration(labelText: 'Category', border: OutlineInputBorder()),
               validator: (v) => v == null ? 'Please select a category' : null,
             ),
-            const SizedBox(height: 16),
-
-            // Sizes Section
-            const Text('Sizes', style: TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 24),
+            const Text('Sizes', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
             _buildAttributeChips(_sizes, _selectedSizeIds),
-            const SizedBox(height: 16),
-
-            // Colors Section
-            const Text('Colors', style: TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 24),
+            const Text('Colors', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
             _buildAttributeChips(_colors, _selectedColorIds),
-            const SizedBox(height: 16),
-
-            // Description
-            TextFormField(controller: _descriptionController, decoration: const InputDecoration(labelText: 'Description'), maxLines: 3),
+            const SizedBox(height: 24),
+            TextFormField(controller: _descriptionController, decoration: const InputDecoration(labelText: 'Description', border: OutlineInputBorder(), alignLabelWithHint: true), maxLines: 4, minLines: 2),
           ],
         ),
       ),
@@ -215,17 +205,20 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
           Container(
             width: 150,
             height: 150,
-            decoration: BoxDecoration(border: Border.all(color: Colors.grey)),
-            child: _selectedImage != null
-                ? (kIsWeb ? Image.network(_selectedImage!.path, fit: BoxFit.cover) : Image.file(File(_selectedImage!.path), fit: BoxFit.cover))
-                : (_existingImageUrl != null ? Image.network(_existingImageUrl!, fit: BoxFit.cover) : const Center(child: Text('No Image'))),
+            decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade300), borderRadius: BorderRadius.circular(12), color: Colors.grey.shade50),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(11),
+              child: _selectedImage != null
+                  ? (kIsWeb ? Image.network(_selectedImage!.path, fit: BoxFit.cover) : Image.file(File(_selectedImage!.path), fit: BoxFit.cover))
+                  : (_existingImageUrl != null ? Image.network(_existingImageUrl!, fit: BoxFit.cover) : const Center(child: Icon(Icons.image_outlined, color: Colors.grey, size: 40))),
+            ),
           ),
           Positioned(
             bottom: 0,
             right: 0,
-            child: IconButton(
-              icon: const CircleAvatar(child: Icon(Icons.camera_alt)),
-              onPressed: _pickImage,
+            child: InkWell(
+              onTap: _pickImage,
+              child: const CircleAvatar(radius: 22, backgroundColor: Colors.white, child: CircleAvatar(radius: 20, child: Icon(Icons.camera_alt))),
             ),
           )
         ],
@@ -234,6 +227,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
   }
 
   Widget _buildAttributeChips(List<dynamic> attributes, List<int> selectedIds) {
+    if (attributes.isEmpty) return const Text('No attributes available.', style: TextStyle(color: Colors.grey));
     return Wrap(
       spacing: 8.0,
       runSpacing: 4.0,
@@ -248,8 +242,9 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
               else { selectedIds.remove(attr['id']); }
             });
           },
-          selectedColor: Colors.blue.shade100,
-          checkmarkColor: Colors.blue.shade800,
+          selectedColor: Theme.of(context).primaryColor,
+          labelStyle: TextStyle(color: isSelected ? Colors.white : Colors.black),
+          checkmarkColor: Colors.white,
         );
       }).toList(),
     );

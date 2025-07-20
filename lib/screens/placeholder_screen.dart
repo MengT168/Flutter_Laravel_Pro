@@ -1,3 +1,4 @@
+// screens/placeholder_screen.dart
 import 'package:flutter/material.dart';
 
 class PlaceholderScreen extends StatelessWidget {
@@ -11,10 +12,7 @@ class PlaceholderScreen extends StatelessWidget {
         title: Text(title),
       ),
       body: Center(
-        child: Text(
-          'Screen for $title',
-          style: const TextStyle(fontSize: 24, color: Colors.grey),
-        ),
+        child: Text('Screen for: $title'),
       ),
     );
   }

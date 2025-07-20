@@ -12,6 +12,9 @@ class AuthService with ChangeNotifier {
     return _instance;
   }
 
+  Map<String, dynamic>? _cartData;
+  Map<String, dynamic>? get cartData => _cartData;
+
 
   final String _baseUrl = kIsWeb
       ? 'http://127.0.0.1:8000/api'   // Use this for Web
@@ -406,18 +409,45 @@ class AuthService with ChangeNotifier {
     );
     return response.statusCode == 200;
   }
+  // Future<List<dynamic>> getProducts() async {
+  //   final token = await getToken();
+  //   if (token == null) return [];
+  //   final response = await http.get(
+  //     Uri.parse('$_baseUrl/admin/list-product'),
+  //     headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
+  //   );
+  //   if (response.statusCode == 200) {
+  //     return jsonDecode(response.body)['data'] as List<dynamic>;
+  //   }
+  //   return [];
+  // }
+
   Future<List<dynamic>> getProducts() async {
     final token = await getToken();
     if (token == null) return [];
-    final response = await http.get(
-      Uri.parse('$_baseUrl/admin/list-product'),
-      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
-    );
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body)['data'] as List<dynamic>;
+
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/admin/list-product'),
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
+        if (jsonResponse.containsKey('data') && jsonResponse['data'] is List) {
+          return jsonResponse['data'] as List<dynamic>;
+        }
+      }
+      return [];
+    } catch (e) {
+      debugPrint('Error fetching products: $e');
+      return [];
     }
-    return [];
   }
+
 
   Future<bool> deleteProduct(int id) async {
     final token = await getToken();
@@ -429,7 +459,7 @@ class AuthService with ChangeNotifier {
     return response.statusCode == 200;
   }
 
-  Future<bool> addProduct(Map<String, String> fields, List<String> sizeIds, List<String> colorIds, XFile? image) async {
+  Future<bool> addProduct(Map<String, String> fields, List<int> sizeIds, List<int> colorIds, XFile? image) async {
     final token = await getToken();
     if (token == null) return false;
 
@@ -439,8 +469,9 @@ class AuthService with ChangeNotifier {
 
     request.fields.addAll(fields);
 
-    for (var id in sizeIds) { request.fields['size[]'] = id; }
-    for (var id in colorIds) { request.fields['color[]'] = id; }
+    // Convert the lists of IDs into JSON strings. This is the reliable way.
+    request.fields['size'] = jsonEncode(sizeIds);
+    request.fields['color'] = jsonEncode(colorIds);
 
     if (image != null) {
       if (kIsWeb) {
@@ -453,22 +484,20 @@ class AuthService with ChangeNotifier {
     var response = await request.send();
     return response.statusCode == 200;
   }
-  Future<bool> updateProduct(int id, Map<String, String> fields, List<String> sizeIds, List<String> colorIds, XFile? image) async {
+
+  Future<bool> updateProduct(int id, Map<String, String> fields, List<int> sizeIds, List<int> colorIds, XFile? image) async {
     final token = await getToken();
     if (token == null) return false;
 
-    var request = http.MultipartRequest(
-      'POST',
-      Uri.parse('$_baseUrl/admin/product/update/$id'),
-    );
-
+    var request = http.MultipartRequest('POST', Uri.parse('$_baseUrl/admin/product/update/$id'));
     request.headers['Authorization'] = 'Bearer $token';
     request.headers['Accept'] = 'application/json';
 
     request.fields.addAll(fields);
 
-    for (var id in sizeIds) { request.fields['size[]'] = id; }
-    for (var id in colorIds) { request.fields['color[]'] = id; }
+    // Also convert the lists of IDs into JSON strings for updating
+    request.fields['size'] = jsonEncode(sizeIds);
+    request.fields['color'] = jsonEncode(colorIds);
 
     if (image != null) {
       if (kIsWeb) {
@@ -481,6 +510,7 @@ class AuthService with ChangeNotifier {
     var response = await request.send();
     return response.statusCode == 200;
   }
+
 
   Future<Map<String, dynamic>?> getHomeData() async {
     try {
@@ -520,14 +550,18 @@ class AuthService with ChangeNotifier {
       body: jsonEncode({'userId': user!['id'], 'proId': productId, 'qty': quantity}),
     );
 
-    print('ADD TO CART STATUS CODE: ${response.statusCode}');
-    print('ADD TO CART RESPONSE BODY: ${response.body}');
-
-    return response.statusCode == 200;
+    if (response.statusCode == 200) {
+      await getCartItems(); // <-- FIX: On success, refresh the cart data
+      return true;
+    }
+    return false;
   }
 
   Future<Map<String, dynamic>?> getCartItems() async {
-    if (user == null) return null;
+    if (user == null) {
+      _cartData = null; // Ensure cart is null if logged out
+      return null;
+    }
     final token = await getToken();
     if (token == null) return null;
 
@@ -537,7 +571,9 @@ class AuthService with ChangeNotifier {
     );
 
     if (response.statusCode == 200) {
-      return jsonDecode(response.body);
+      _cartData = jsonDecode(response.body);
+      notifyListeners(); // <-- FIX: Notify widgets that cart data has changed
+      return _cartData;
     }
     return null;
   }
