@@ -668,6 +668,38 @@ class AuthService with ChangeNotifier {
     );
     return response.statusCode == 200;
   }
+
+  Future<bool> increaseCartItemQuantity(int cartItemId) async {
+    final token = await getToken();
+    if (token == null) return false;
+
+    final response = await http.post(
+      Uri.parse('$_baseUrl/cart-item/increase/$cartItemId'),
+      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
+    );
+
+    if (response.statusCode == 200) {
+      await getCartItems(); // Refresh cart data and notify listeners
+      return true;
+    }
+    return false;
+  }
+
+  Future<bool> decreaseCartItemQuantity(int cartItemId) async {
+    final token = await getToken();
+    if (token == null) return false;
+
+    final response = await http.post(
+      Uri.parse('$_baseUrl/cart-item/decrease/$cartItemId'),
+      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
+    );
+
+    if (response.statusCode == 200) {
+      await getCartItems(); // Refresh cart data and notify listeners
+      return true;
+    }
+    return false;
+  }
 }
 
 

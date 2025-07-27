@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:lara_flutter_pro/screens/checkout_screen.dart';
-import 'package:lara_flutter_pro/screens/login_screen.dart';
 import 'package:provider/provider.dart';
 import '../auth/auth_service.dart';
+import 'checkout_screen.dart';
+import 'login_screen.dart';
 
 class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
@@ -18,7 +18,9 @@ class _CartScreenState extends State<CartScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     final authService = context.watch<AuthService>();
-    if (authService.user != null && authService.cartData == null && !_isLoading) {
+    if (authService.user != null &&
+        authService.cartData == null &&
+        !_isLoading) {
       _fetchCartItems();
     }
   }
@@ -45,9 +47,12 @@ class _CartScreenState extends State<CartScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Remove Item?'),
-        content: const Text('Are you sure you want to remove this item from your cart?'),
+        content: const Text(
+            'Are you sure you want to remove this item from your cart?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel')),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Remove', style: TextStyle(color: Colors.red)),
@@ -87,7 +92,8 @@ class _CartScreenState extends State<CartScreen> {
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
-    if (authService.cartData == null || (authService.cartData!['items'] as List).isEmpty) {
+    if (authService.cartData == null ||
+        (authService.cartData!['items'] as List).isEmpty) {
       return _buildEmptyCart();
     }
     return _buildCartView(authService.cartData!);
@@ -106,7 +112,13 @@ class _CartScreenState extends State<CartScreen> {
               padding: const EdgeInsets.symmetric(vertical: 8.0),
               itemCount: items.length,
               itemBuilder: (context, index) {
-                return _CartItemCard(item: items[index]);
+                return _CartItemCard(
+                  item: items[index],
+                  onRemove: _removeItem,
+                  onQuantityChange: (cartItemId, increase) {
+                    _updateQuantity(items[index], increase);
+                  },
+                );
               },
             ),
           ),
@@ -116,7 +128,28 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 
-  Widget _CartItemCard({required Map<String, dynamic> item}) {
+  void _updateQuantity(Map<String, dynamic> item, bool increase) {
+    final oldQty = item['quantity'];
+    setState(() => item['quantity'] = increase ? oldQty + 1 : oldQty - 1);
+
+    final authService = context.read<AuthService>();
+    final Future<bool> future = increase
+        ? authService.increaseCartItemQuantity(item['cart_item_id'])
+        : authService.decreaseCartItemQuantity(item['cart_item_id']);
+
+    future.then((success) {
+      if (!success) {
+        setState(() => item['quantity'] = oldQty); // Rollback
+        _showSnackbar('Failed to update quantity', false);
+      }
+    });
+  }
+
+  Widget _CartItemCard({
+    required Map<String, dynamic> item,
+    required Function(int) onRemove,
+    required Function(int, bool) onQuantityChange,
+  }) {
     final imageUrl = item['thumbnail_url'];
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -129,9 +162,19 @@ class _CartScreenState extends State<CartScreen> {
             ClipRRect(
               borderRadius: BorderRadius.circular(8.0),
               child: (imageUrl != null && imageUrl.isNotEmpty)
-                  ? Image.network(imageUrl, width: 80, height: 80, fit: BoxFit.cover,
-                  errorBuilder: (c, e, s) => Image.asset('assets/images/default-image.jpg', width: 80, height: 80, fit: BoxFit.cover))
-                  : Image.asset('assets/images/default-image.jpg', width: 80, height: 80, fit: BoxFit.cover),
+                  ? Image.network(
+                imageUrl,
+                width: 80,
+                height: 80,
+                fit: BoxFit.cover,
+                errorBuilder: (c, e, s) => Image.asset(
+                    'assets/images/default-image.jpg',
+                    width: 80,
+                    height: 80,
+                    fit: BoxFit.cover),
+              )
+                  : Image.asset('assets/images/default-image.jpg',
+                  width: 80, height: 80, fit: BoxFit.cover),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -140,15 +183,22 @@ class _CartScreenState extends State<CartScreen> {
                 children: [
                   Text(
                     item['product_name'] ?? 'No Name',
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 16),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 4),
-                  Text('\$${item['price']}', style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 14)),
+                  Text('\$${item['price']}',
+                      style: TextStyle(
+                          color: Theme.of(context).colorScheme.primary,
+                          fontSize: 14)),
                   TextButton(
-                    onPressed: () => _removeItem(item['cart_item_id']),
-                    style: TextButton.styleFrom(padding: EdgeInsets.zero, visualDensity: VisualDensity.compact, foregroundColor: Colors.red),
+                    onPressed: () => onRemove(item['cart_item_id']),
+                    style: TextButton.styleFrom(
+                        padding: EdgeInsets.zero,
+                        visualDensity: VisualDensity.compact,
+                        foregroundColor: Colors.red),
                     child: const Text('Remove', style: TextStyle(fontSize: 12)),
                   ),
                 ],
@@ -156,9 +206,20 @@ class _CartScreenState extends State<CartScreen> {
             ),
             Row(
               children: [
-                IconButton(icon: const Icon(Icons.remove_circle_outline, size: 22, color: Colors.grey), onPressed: () {/* TODO: decrease qty */}),
-                Text('${item['quantity']}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                IconButton(icon: const Icon(Icons.add_circle_outline, size: 22), onPressed: () {/* TODO: increase qty */}),
+                IconButton(
+                  icon: const Icon(Icons.remove_circle_outline,
+                      size: 22, color: Colors.grey),
+                  onPressed: item['quantity'] > 1
+                      ? () => onQuantityChange(item['cart_item_id'], false)
+                      : null,
+                ),
+                Text('${item['quantity']}',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 16)),
+                IconButton(
+                  icon: const Icon(Icons.add_circle_outline, size: 22),
+                  onPressed: () => onQuantityChange(item['cart_item_id'], true),
+                ),
               ],
             )
           ],
@@ -171,7 +232,8 @@ class _CartScreenState extends State<CartScreen> {
     const double shipping = 5.00;
     return Card(
       margin: const EdgeInsets.all(0),
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       elevation: 8,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
@@ -181,17 +243,25 @@ class _CartScreenState extends State<CartScreen> {
             const SizedBox(height: 8),
             _buildSummaryRow('Shipping', '\$${shipping.toStringAsFixed(2)}'),
             const Divider(height: 24),
-            _buildSummaryRow('Total', '\$${(total + shipping).toStringAsFixed(2)}', isTotal: true),
+            _buildSummaryRow('Total',
+                '\$${(total + shipping).toStringAsFixed(2)}',
+                isTotal: true),
             const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,
               height: 50,
               child: ElevatedButton(
                 onPressed: () {
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const CheckoutScreen()));
+                  Navigator.push(context,
+                      MaterialPageRoute(builder: (_) => const CheckoutScreen()));
                 },
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.black, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30))),
-                child: const Text('Proceed to Checkout', style: TextStyle(fontSize: 16)),
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.black,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30))),
+                child: const Text('Proceed to Checkout',
+                    style: TextStyle(fontSize: 16)),
               ),
             )
           ],
@@ -217,11 +287,14 @@ class _CartScreenState extends State<CartScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.production_quantity_limits, size: 100, color: Colors.grey),
+          const Icon(Icons.production_quantity_limits,
+              size: 100, color: Colors.grey),
           const SizedBox(height: 16),
-          Text('Your Cart is Empty', style: Theme.of(context).textTheme.headlineSmall),
+          Text('Your Cart is Empty',
+              style: Theme.of(context).textTheme.headlineSmall),
           const SizedBox(height: 8),
-          const Text('Looks like you haven\'t added\nanything to your cart yet.', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey)),
+          const Text('Looks like you haven\'t added\nanything to your cart yet.',
+              textAlign: TextAlign.center, style: TextStyle(color: Colors.grey)),
         ],
       ),
     );
@@ -232,13 +305,19 @@ class _CartScreenState extends State<CartScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.shopping_cart_outlined, size: 80, color: Colors.grey),
+          const Icon(Icons.shopping_cart_outlined,
+              size: 80, color: Colors.grey),
           const SizedBox(height: 16),
-          const Text("Login to see your cart items.", style: TextStyle(fontSize: 16, color: Colors.grey)),
+          const Text("Login to see your cart items.",
+              style: TextStyle(fontSize: 16, color: Colors.grey)),
           const SizedBox(height: 16),
           ElevatedButton(
             onPressed: () {
-              Navigator.push(context, MaterialPageRoute(builder: (_) => const LoginScreen(isPoppingOnSuccess: true)));
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) =>
+                      const LoginScreen(isPoppingOnSuccess: true)));
             },
             child: const Text('Login / Register'),
           ),
