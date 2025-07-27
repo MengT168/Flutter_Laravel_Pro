@@ -6,6 +6,8 @@ import 'package:lara_flutter_pro/screens/placeholder_screen.dart';
 import 'package:lara_flutter_pro/screens/profile_screen.dart';
 import 'package:provider/provider.dart';
 
+import 'OrderScreen.dart';
+
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
 
@@ -38,7 +40,8 @@ class _MainScreenState extends State<MainScreen> {
   // The list of screens for your bottom navigation bar.
   static const List<Widget> _widgetOptions = <Widget>[
     HomeScreen(),
-    PlaceholderScreen(title: 'Categories'), // You can build this screen later
+    OrderScreen(),
+    // PlaceholderScreen(title: 'Categories'), // You can build this screen later
     CartScreen(),
     ProfileScreen(),
   ];
@@ -68,7 +71,7 @@ class _MainScreenState extends State<MainScreen> {
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.category_outlined), activeIcon: Icon(Icons.category), label: 'Order'),
+          BottomNavigationBarItem(icon: Icon(Icons.receipt_long_outlined), activeIcon: Icon(Icons.receipt_long), label: 'Orders'),
           BottomNavigationBarItem(icon: Icon(Icons.shopping_cart_outlined), activeIcon: Icon(Icons.shopping_cart), label: 'Cart'),
           BottomNavigationBarItem(icon: Icon(Icons.person_outline), activeIcon: Icon(Icons.person), label: 'Profile'),
         ],

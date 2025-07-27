@@ -265,7 +265,7 @@ class AuthService with ChangeNotifier {
     final token = await getToken();
     if (token == null) return false;
 
-    final response = await http.post(
+    final response = await http.put(
       Uri.parse('$_baseUrl/admin/category/update/$id'),
       headers: {
         'Accept': 'application/json',
@@ -489,7 +489,7 @@ class AuthService with ChangeNotifier {
     final token = await getToken();
     if (token == null) return false;
 
-    var request = http.MultipartRequest('POST', Uri.parse('$_baseUrl/admin/product/update/$id'));
+    var request = http.MultipartRequest('PATCH', Uri.parse('$_baseUrl/admin/product/update/$id'));
     request.headers['Authorization'] = 'Bearer $token';
     request.headers['Accept'] = 'application/json';
 
@@ -578,6 +578,28 @@ class AuthService with ChangeNotifier {
     return null;
   }
 
+  // Future<bool> placeOrder({required String phone, required String address}) async {
+  //   if (user == null) return false;
+  //   final token = await getToken();
+  //   if (token == null) return false;
+  //
+  //   final response = await http.post(
+  //     Uri.parse('$_baseUrl/place-order'),
+  //     headers: {'Accept': 'application/json', 'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+  //     body: jsonEncode({
+  //       'userId': user!['id'],
+  //       'phone': phone,
+  //       'address': address,
+  //     }),
+  //   );
+  //
+  //   // ADD THESE LINES TO DEBUG
+  //   print('PLACE ORDER STATUS CODE: ${response.statusCode}');
+  //   print('PLACE ORDER RESPONSE BODY: ${response.body}');
+  //
+  //   return response.statusCode == 200;
+  // }
+
   Future<bool> placeOrder({required String phone, required String address}) async {
     if (user == null) return false;
     final token = await getToken();
@@ -592,7 +614,15 @@ class AuthService with ChangeNotifier {
         'address': address,
       }),
     );
-    return response.statusCode == 200;
+
+    if (response.statusCode == 200) {
+      // THE FIX: On success, refresh the cart data.
+      // This will update the local _cartData and notify the CartScreen to rebuild.
+      await getCartItems();
+      return true;
+    }
+
+    return false;
   }
 
   Future<bool> removeCartItem(int cartItemId) async {
@@ -610,6 +640,32 @@ class AuthService with ChangeNotifier {
     print('DELETE ITEM STATUS CODE: ${response.statusCode}');
     print('DELETE ITEM RESPONSE BODY: ${response.body}');
 
+    return response.statusCode == 200;
+  }
+
+  Future<List<dynamic>> getMyOrders() async {
+    final token = await getToken();
+    if (token == null) return [];
+
+    final response = await http.get(
+      Uri.parse('$_baseUrl/my-orders'),
+      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body)['data'] as List<dynamic>;
+    }
+    return [];
+  }
+
+  Future<bool> cancelOrder(int orderId) async {
+    final token = await getToken();
+    if (token == null) return false;
+
+    final response = await http.post(
+      Uri.parse('$_baseUrl/cancel-order/$orderId'),
+      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
+    );
     return response.statusCode == 200;
   }
 }
