@@ -12,6 +12,10 @@ class AuthService with ChangeNotifier {
     return _instance;
   }
 
+  List<dynamic> _favorites = [];
+  List<dynamic> get favorites => _favorites;
+  List<int> get favoriteProductIds => _favorites.map((p) => p['id'] as int).toList();
+
   Map<String, dynamic>? _cartData;
   Map<String, dynamic>? get cartData => _cartData;
 
@@ -114,7 +118,7 @@ class AuthService with ChangeNotifier {
 
           // THE FIX: Save the user data to the service
           _currentUser = userMap;
-
+          await _fetchUserAndDependencies();
           notifyListeners();
 
           return userMap;
@@ -141,6 +145,7 @@ class AuthService with ChangeNotifier {
       );
       if (response.statusCode == 200) {
         _currentUser = jsonDecode(response.body);
+        await _fetchUserAndDependencies();
         notifyListeners();
         return _currentUser;
       }
@@ -164,6 +169,7 @@ class AuthService with ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('auth_token');
     _currentUser = null;
+    _favorites = [];
     notifyListeners();
   }
 
@@ -699,6 +705,71 @@ class AuthService with ChangeNotifier {
       return true;
     }
     return false;
+  }
+  Future<List<dynamic>> searchProducts(String query) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/products/search?q=$query'),
+        headers: {'Accept': 'application/json'},
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body)['data'] as List<dynamic>;
+      }
+      return [];
+    } catch (e) {
+      print('Error searching products: $e');
+      return [];
+    }
+  }
+
+  Future<void> _fetchUserAndDependencies() async {
+    await Future.wait([
+      getFavorites(),
+    ]);
+  }
+
+  Future<void> getFavorites() async {
+    if (user == null) {
+      _favorites = [];
+      return;
+    }
+    final token = await getToken();
+    if (token == null) return;
+
+    final response = await http.get(
+      Uri.parse('$_baseUrl/favorites'),
+      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
+    );
+    if (response.statusCode == 200) {
+      _favorites = jsonDecode(response.body)['data'] as List;
+      notifyListeners();
+    }
+  }
+
+  Future<void> toggleFavorite(int productId) async {
+    if (user == null) return;
+    final token = await getToken();
+    if (token == null) return;
+
+    // First, update the UI instantly for a good user experience
+    final isFavorite = favoriteProductIds.contains(productId);
+    if (isFavorite) {
+      _favorites.removeWhere((p) => p['id'] == productId);
+    } else {
+      // Note: We don't have the full product data, so we can't add it here.
+      // The server will have the final say. We will just re-fetch.
+    }
+    notifyListeners();
+
+    // Then, send the request to the server
+    await http.post(
+      Uri.parse('$_baseUrl/favorites/toggle'),
+      headers: {'Accept': 'application/json', 'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+      body: jsonEncode({'product_id': productId}),
+    );
+
+    // Finally, re-fetch the official list from the server to ensure consistency
+    await getFavorites();
   }
 }
 

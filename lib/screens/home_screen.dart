@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lara_flutter_pro/screens/product_detail_screen.dart';
+import 'package:lara_flutter_pro/screens/search_screen.dart';
 import '../auth/auth_service.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -46,7 +47,16 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: const Text('My Shop'),
         actions: [
-          IconButton(icon: const Icon(Icons.search), onPressed: () {}),
+          IconButton(
+            icon: const Icon(Icons.search),
+            onPressed: () {
+              // Navigate to the new SearchScreen
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const SearchScreen()),
+              );
+            },
+          ),
           IconButton(icon: const Icon(Icons.favorite_border), onPressed: () {}),
         ],
       ),
