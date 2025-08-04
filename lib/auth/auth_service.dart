@@ -16,15 +16,21 @@ class AuthService with ChangeNotifier {
   List<dynamic> get favorites => _favorites;
   List<int> get favoriteProductIds => _favorites.map((p) => p['id'] as int).toList();
 
+  Future<void> _fetchUserAndDependencies() async {
+    await Future.wait([
+      getFavorites(),
+    ]);
+  }
+
   Map<String, dynamic>? _cartData;
   Map<String, dynamic>? get cartData => _cartData;
 
 
   final String _baseUrl = kIsWeb
-      ? 'http://127.0.0.1:8000/api'   // Use this for Web
+      ? 'http://127.0.0.1:8000/api'
       : 'http://10.0.2.2:8000/api';
   final String serverUrl = kIsWeb
-      ? 'http://127.0.0.1:8000'   // For Web
+      ? 'http://127.0.0.1:8000'
       : 'http://10.0.2.2:8000';
 
 
@@ -85,7 +91,55 @@ class AuthService with ChangeNotifier {
   Map<String, dynamic>? _currentUser;
   Map<String, dynamic>? get user => _currentUser;
 
-  // In auth/auth_service.dart
+
+
+  // Future<Map<String, dynamic>?> login(String name, String password) async {
+  //   try {
+  //     final response = await http.post(
+  //       Uri.parse('$_baseUrl/loginSubmit'),
+  //       headers: {
+  //         'Content-Type': 'application/json; charset=UTF-8',
+  //         'Accept': 'application/json',
+  //       },
+  //       body: jsonEncode({'name': name, 'password': password}),
+  //     );
+  //
+  //     if (response.statusCode == 200) {
+  //       final data = jsonDecode(response.body);
+  //
+  //       if (data['access_token'] != null) {
+  //         await _storeToken(data['access_token']);
+  //
+  //         // Safely check the admin status
+  //         final dynamic adminValue = data['is_admin'];
+  //         final bool isAdmin = (adminValue == 1 || adminValue == true);
+  //
+  //         // Create the user map that the rest of the app will use
+  //         final userMap = {
+  //           'id': data['id'], // Make sure your API sends the user's ID
+  //           'name': data['username'],
+  //           'is_admin': isAdmin,
+  //           // You can add 'email' here too if your API sends it
+  //         };
+  //
+  //         // THE FIX: Save the user data to the service
+  //         _currentUser = userMap;
+  //         await _fetchUserAndDependencies();
+  //         notifyListeners();
+  //
+  //         return userMap;
+  //       }
+  //     }
+  //
+  //     print('Login failed with status: ${response.statusCode}');
+  //     print('Response: ${response.body}');
+  //     return null;
+  //
+  //   } catch (e) {
+  //     print('Error during login: $e');
+  //     return null;
+  //   }
+  // }
 
   Future<Map<String, dynamic>?> login(String name, String password) async {
     try {
@@ -110,27 +164,21 @@ class AuthService with ChangeNotifier {
 
           // Create the user map that the rest of the app will use
           final userMap = {
-            'id': data['id'], // Make sure your API sends the user's ID
+            'id': data['id'],
             'name': data['username'],
             'is_admin': isAdmin,
-            // You can add 'email' here too if your API sends it
+            'email': data['email'],
           };
 
-          // THE FIX: Save the user data to the service
           _currentUser = userMap;
-          await _fetchUserAndDependencies();
+          await _fetchUserAndDependencies(); // Fetch cart/favorites
           notifyListeners();
 
           return userMap;
         }
       }
-
-      print('Login failed with status: ${response.statusCode}');
-      print('Response: ${response.body}');
       return null;
-
     } catch (e) {
-      print('Error during login: $e');
       return null;
     }
   }
@@ -243,7 +291,6 @@ class AuthService with ChangeNotifier {
     );
 
     if (response.statusCode == 200) {
-      // **FIX 1: Access the "category" key from the response**
       final data = jsonDecode(response.body);
       return data['category'] as List<dynamic>;
     }
@@ -399,7 +446,7 @@ class AuthService with ChangeNotifier {
   Future<bool> toggleLogoStatus(int id) async {
     final token = await getToken();
     if (token == null) return false;
-    final response = await http.patch( // Your route uses PATCH
+    final response = await http.patch(
       Uri.parse('$_baseUrl/admin/logo/toggle-status/$id'),
       headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
     );
@@ -475,7 +522,6 @@ class AuthService with ChangeNotifier {
 
     request.fields.addAll(fields);
 
-    // Convert the lists of IDs into JSON strings. This is the reliable way.
     request.fields['size'] = jsonEncode(sizeIds);
     request.fields['color'] = jsonEncode(colorIds);
 
@@ -501,7 +547,6 @@ class AuthService with ChangeNotifier {
 
     request.fields.addAll(fields);
 
-    // Also convert the lists of IDs into JSON strings for updating
     request.fields['size'] = jsonEncode(sizeIds);
     request.fields['color'] = jsonEncode(colorIds);
 
@@ -557,7 +602,7 @@ class AuthService with ChangeNotifier {
     );
 
     if (response.statusCode == 200) {
-      await getCartItems(); // <-- FIX: On success, refresh the cart data
+      await getCartItems();
       return true;
     }
     return false;
@@ -565,7 +610,7 @@ class AuthService with ChangeNotifier {
 
   Future<Map<String, dynamic>?> getCartItems() async {
     if (user == null) {
-      _cartData = null; // Ensure cart is null if logged out
+      _cartData = null;
       return null;
     }
     final token = await getToken();
@@ -578,7 +623,7 @@ class AuthService with ChangeNotifier {
 
     if (response.statusCode == 200) {
       _cartData = jsonDecode(response.body);
-      notifyListeners(); // <-- FIX: Notify widgets that cart data has changed
+      notifyListeners();
       return _cartData;
     }
     return null;
@@ -622,8 +667,6 @@ class AuthService with ChangeNotifier {
     );
 
     if (response.statusCode == 200) {
-      // THE FIX: On success, refresh the cart data.
-      // This will update the local _cartData and notify the CartScreen to rebuild.
       await getCartItems();
       return true;
     }
@@ -685,7 +728,7 @@ class AuthService with ChangeNotifier {
     );
 
     if (response.statusCode == 200) {
-      await getCartItems(); // Refresh cart data and notify listeners
+      await getCartItems();
       return true;
     }
     return false;
@@ -722,11 +765,7 @@ class AuthService with ChangeNotifier {
     }
   }
 
-  Future<void> _fetchUserAndDependencies() async {
-    await Future.wait([
-      getFavorites(),
-    ]);
-  }
+
 
   Future<void> getFavorites() async {
     if (user == null) {
@@ -751,24 +790,16 @@ class AuthService with ChangeNotifier {
     final token = await getToken();
     if (token == null) return;
 
-    // First, update the UI instantly for a good user experience
-    final isFavorite = favoriteProductIds.contains(productId);
-    if (isFavorite) {
-      _favorites.removeWhere((p) => p['id'] == productId);
-    } else {
-      // Note: We don't have the full product data, so we can't add it here.
-      // The server will have the final say. We will just re-fetch.
-    }
-    notifyListeners();
-
-    // Then, send the request to the server
-    await http.post(
+    final response = await http.post(
       Uri.parse('$_baseUrl/favorites/toggle'),
       headers: {'Accept': 'application/json', 'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
       body: jsonEncode({'product_id': productId}),
     );
 
-    // Finally, re-fetch the official list from the server to ensure consistency
+    print('TOGGLE FAVORITE STATUS CODE: ${response.statusCode}');
+    print('TOGGLE FAVORITE RESPONSE BODY: ${response.body}');
+
+    // Re-fetch the official list from the server to ensure consistency
     await getFavorites();
   }
 }

@@ -1,0 +1,14 @@
+{
+  "myShop": "My Shop",
+  "home": "Home",
+  "orders": "Orders",
+  "cart": "Cart",
+  "profile": "Profile",
+  "newArrivals": "New Arrivals",
+  "promotions": "Promotions",
+  "popularProducts": "Popular Products",
+  "seeAll": "See All",
+  "productDetail": "Product Detail",
+  "addToCart": "Add to Cart",
+  "loginToView": "Login to see your items"
+}

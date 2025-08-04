@@ -30,7 +30,17 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+
+  flutter_localizations:
+    sdk: flutter
+
+
   provider: ^6.1.5
+  intl: ^0.20.2
+  http: ^1.2.1
+  shared_preferences: ^2.2.3
+  image_picker: ^1.1.2
+
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -40,9 +50,6 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
 
-  http: ^1.2.1
-  shared_preferences: ^2.2.3
-  image_picker: ^1.1.2
 
 
   # The "flutter_lints" package below contains a set of recommended lints to
@@ -62,7 +69,7 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
-
+  generate: true
   # To add assets to your application, add an assets section, like this:
   assets:
     - assets/images/

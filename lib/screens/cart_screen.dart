@@ -14,6 +14,8 @@ class CartScreen extends StatefulWidget {
 class _CartScreenState extends State<CartScreen> {
   bool _isLoading = false;
 
+
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -73,12 +75,13 @@ class _CartScreenState extends State<CartScreen> {
   @override
   Widget build(BuildContext context) {
     final authService = context.watch<AuthService>();
-
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : Colors.black;
     return Scaffold(
       appBar: AppBar(
         title: const Text('My Cart'),
         elevation: 1,
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
       ),
       backgroundColor: Colors.grey[100],
       body: _buildBody(authService),
@@ -207,8 +210,8 @@ class _CartScreenState extends State<CartScreen> {
             Row(
               children: [
                 IconButton(
-                  icon: const Icon(Icons.remove_circle_outline,
-                      size: 22, color: Colors.grey),
+                  icon:  Icon(Icons.remove_circle_outline,
+                      size: 22, color: Theme.of(context).iconTheme.color?.withOpacity(0.6)),
                   onPressed: item['quantity'] > 1
                       ? () => onQuantityChange(item['cart_item_id'], false)
                       : null,
@@ -239,13 +242,11 @@ class _CartScreenState extends State<CartScreen> {
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
         child: Column(
           children: [
-            _buildSummaryRow('Subtotal', '\$${total.toStringAsFixed(2)}'),
+            _buildSummaryRow(context, 'Subtotal', '\$${total.toStringAsFixed(2)}'),
             const SizedBox(height: 8),
-            _buildSummaryRow('Shipping', '\$${shipping.toStringAsFixed(2)}'),
+            _buildSummaryRow(context, 'Shipping', '\$${shipping.toStringAsFixed(2)}'),
             const Divider(height: 24),
-            _buildSummaryRow('Total',
-                '\$${(total + shipping).toStringAsFixed(2)}',
-                isTotal: true),
+            _buildSummaryRow(context, 'Total', '\$${(total + shipping).toStringAsFixed(2)}', isTotal: true),
             const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,
@@ -256,10 +257,10 @@ class _CartScreenState extends State<CartScreen> {
                       MaterialPageRoute(builder: (_) => const CheckoutScreen()));
                 },
                 style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.black,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30))),
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                ),
+
                 child: const Text('Proceed to Checkout',
                     style: TextStyle(fontSize: 16)),
               ),
@@ -270,31 +271,50 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 
-  Widget _buildSummaryRow(String label, String value, {bool isTotal = false}) {
-    final style = TextStyle(
-      fontSize: isTotal ? 18 : 16,
-      fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
-      color: isTotal ? Colors.black : Colors.grey.shade700,
-    );
+  Widget _buildSummaryRow(BuildContext context, String label, String value, {bool isTotal = false}) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : Colors.black;
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [Text(label, style: style), Text(value, style: style)],
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: isTotal ? 18 : 16,
+            fontWeight: isTotal ? FontWeight.bold : FontWeight.w600,
+            color: textColor,
+          ),
+        ),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: isTotal ? 18 : 16,
+            fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
+            color: textColor,
+          ),
+        ),
+      ],
     );
   }
+
 
   Widget _buildEmptyCart() {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.production_quantity_limits,
-              size: 100, color: Colors.grey),
+            Icon(Icons.production_quantity_limits,
+              size: 100, color: Theme.of(context).colorScheme.onSurfaceVariant),
           const SizedBox(height: 16),
           Text('Your Cart is Empty',
               style: Theme.of(context).textTheme.headlineSmall),
           const SizedBox(height: 8),
-          const Text('Looks like you haven\'t added\nanything to your cart yet.',
-              textAlign: TextAlign.center, style: TextStyle(color: Colors.grey)),
+           Text('Looks like you haven\'t added\nanything to your cart yet.',
+              textAlign: TextAlign.center,style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
         ],
       ),
     );
@@ -305,11 +325,14 @@ class _CartScreenState extends State<CartScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.shopping_cart_outlined,
-              size: 80, color: Colors.grey),
+           Icon(Icons.shopping_cart_outlined,
+              size: 80, color: Theme.of(context).colorScheme.onSurfaceVariant),
           const SizedBox(height: 16),
-          const Text("Login to see your cart items.",
-              style: TextStyle(fontSize: 16, color: Colors.grey)),
+           Text("Login to see your cart items.",
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                fontSize: 16,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              )),
           const SizedBox(height: 16),
           ElevatedButton(
             onPressed: () {

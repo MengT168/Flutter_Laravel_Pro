@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:lara_flutter_pro/auth/auth_service.dart';
 import 'package:lara_flutter_pro/screens/cart_screen.dart';
 import 'package:lara_flutter_pro/screens/home_screen.dart';
-import 'package:lara_flutter_pro/screens/placeholder_screen.dart';
 import 'package:lara_flutter_pro/screens/profile_screen.dart';
 import 'package:provider/provider.dart';
 
@@ -41,7 +40,6 @@ class _MainScreenState extends State<MainScreen> {
   static const List<Widget> _widgetOptions = <Widget>[
     HomeScreen(),
     OrderScreen(),
-    // PlaceholderScreen(title: 'Categories'), // You can build this screen later
     CartScreen(),
     ProfileScreen(),
   ];
@@ -54,7 +52,6 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Show a loading screen while we check for a logged-in user.
     if (_isInitializing) {
       return const Scaffold(
         body: Center(

@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
+
+import 'package:lara_flutter_pro/screens/login_screen.dart';
 import 'package:lara_flutter_pro/screens/product_detail_screen.dart';
 import 'package:lara_flutter_pro/screens/search_screen.dart';
+import 'package:lara_flutter_pro/screens/favorite_screen.dart'; // Import FavoriteScreen
+import 'package:provider/provider.dart'; // Import Provider
 import '../auth/auth_service.dart';
+import '../l10n/app_localizations.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -11,7 +16,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final AuthService _authService = AuthService();
   Map<String, List<dynamic>> _products = {
     'new_products': [],
     'promotion_products': [],
@@ -28,7 +32,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _fetchHomeData() async {
     if (!mounted) return;
     setState(() => _isLoading = true);
-    final data = await _authService.getHomeData();
+    final data = await context.read<AuthService>().getHomeData();
     if (data != null && mounted) {
       setState(() {
         _products['new_products'] = data['new_products'] ?? [];
@@ -43,21 +47,31 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final authService = context.watch<AuthService>();
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('My Shop'),
+        title: Text(AppLocalizations.of(context)!.myShop),
         actions: [
           IconButton(
             icon: const Icon(Icons.search),
             onPressed: () {
-              // Navigate to the new SearchScreen
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => const SearchScreen()),
               );
             },
           ),
-          IconButton(icon: const Icon(Icons.favorite_border), onPressed: () {}),
+          IconButton(
+            icon: const Icon(Icons.favorite_border),
+            onPressed: () {
+              if (authService.user == null) {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const LoginScreen(isPoppingOnSuccess: true)));
+              } else {
+                Navigator.push(context, MaterialPageRoute(builder: (context) => const FavoriteScreen()));
+              }
+            },
+          ),
         ],
       ),
       body: _isLoading
@@ -120,34 +134,27 @@ class ProductCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final imageUrl = product['thumbnail_url'];
+    // Watch the AuthService to get the latest list of favorites
+    final authService = context.watch<AuthService>();
+    final isFavorite = authService.favoriteProductIds.contains(product['id']);
 
+    final imageUrl = product['thumbnail_url'];
     final double salePrice = (product['sale_price'] as num?)?.toDouble() ?? 0.0;
     final double regularPrice = (product['regular_price'] as num?)?.toDouble() ?? 0.0;
 
     Widget priceWidget;
-
     if (salePrice > 0 && salePrice < regularPrice) {
       priceWidget = Row(
         crossAxisAlignment: CrossAxisAlignment.baseline,
         textBaseline: TextBaseline.alphabetic,
         children: [
-          Text(
-            '\$${salePrice.toStringAsFixed(2)}',
-            style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 16),
-          ),
+          Text('\$${salePrice.toStringAsFixed(2)}', style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 16)),
           const SizedBox(width: 8),
-          Text(
-            '\$${regularPrice.toStringAsFixed(2)}',
-            style: const TextStyle(decoration: TextDecoration.lineThrough, color: Colors.grey),
-          ),
+          Text('\$${regularPrice.toStringAsFixed(2)}', style: const TextStyle(decoration: TextDecoration.lineThrough, color: Colors.grey)),
         ],
       );
     } else {
-      priceWidget = Text(
-        '\$${regularPrice.toStringAsFixed(2)}',
-        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-      );
+      priceWidget = Text('\$${regularPrice.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16));
     }
 
     return Container(
@@ -157,9 +164,7 @@ class ProductCard extends StatelessWidget {
         onTap: () {
           Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (context) => ProductDetailScreen(productSlug: product['slug']),
-            ),
+            MaterialPageRoute(builder: (context) => ProductDetailScreen(productSlug: product['slug'])),
           );
         },
         borderRadius: BorderRadius.circular(10),
@@ -173,15 +178,41 @@ class ProductCard extends StatelessWidget {
               SizedBox(
                 height: 120,
                 width: double.infinity,
-                child: (imageUrl != null && imageUrl.isNotEmpty)
-                    ? Image.network(
-                  imageUrl,
-                  fit: BoxFit.cover,
-                  errorBuilder: (c, e, s) => Image.asset('assets/images/default-image.jpg', fit: BoxFit.cover),
-                  loadingBuilder: (context, child, progress) =>
-                  progress == null ? child : const Center(child: CircularProgressIndicator()),
-                )
-                    : Image.asset('assets/images/default-image.jpg', fit: BoxFit.cover),
+                // THE CHANGE IS HERE: We use a Stack to overlay the favorite button
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    (imageUrl != null && imageUrl.isNotEmpty)
+                        ? Image.network(
+                      imageUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (c, e, s) => Image.asset('assets/images/placeholder.png', fit: BoxFit.cover),
+                      loadingBuilder: (context, child, progress) =>
+                      progress == null ? child : const Center(child: CircularProgressIndicator()),
+                    )
+                        : Image.asset('assets/images/placeholder.png', fit: BoxFit.cover),
+
+                    // The Favorite Button
+                    if (authService.user != null)
+                      Positioned(
+                        top: 4,
+                        right: 4,
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(20),
+                            onTap: () {
+                              context.read<AuthService>().toggleFavorite(product['id']);
+                            },
+                            child: Icon(
+                              isFavorite ? Icons.favorite : Icons.favorite_border,
+                              color: isFavorite ? Colors.red : Colors.grey.shade400,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
               ),
               Expanded(
                 child: Padding(
