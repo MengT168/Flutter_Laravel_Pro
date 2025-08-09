@@ -247,4 +247,41 @@ class AppLocalizationsKm extends AppLocalizations {
 
   @override
   String get ordersInProgress => 'ការបញ្ជាទិញកំពុងដំណើរការ';
+
+  @override
+  String get settings => 'ការកំណត់';
+
+  @override
+  String get done => 'រួចរាល់';
+
+  @override
+  String get remove_item_title => 'លុបផលិតផល';
+
+  @override
+  String get remove_item_message =>
+      'តើអ្នកចង់លុបផលិតផលនេះចេញពីរទូរទំនិញរបស់អ្នកមែនទេ?';
+
+  @override
+  String get item_removed_success => 'បានលុបផលិតផលដោយជោគជ័យ';
+
+  @override
+  String get item_removed_failed => 'លុបផលិតផលមិនបានជោគជ័យទេ';
+
+  @override
+  String get update_quantity_failed => 'ការកែប្រែចំនួនបរាជ័យ';
+
+  @override
+  String get no_name => 'គ្មានឈ្មោះ';
+
+  @override
+  String get proceed_to_checkout => 'បន្តទិញទំនិញ';
+
+  @override
+  String get empty_cart_title => 'រទូរទំនិញទទេ';
+
+  @override
+  String get empty_cart_message => 'មិនមានផលិតផលក្នុងរទូរទំនិញទេ។';
+
+  @override
+  String get login_prompt => 'សូមចូលប្រើដើម្បីបន្ត';
 }

@@ -74,5 +74,17 @@
   "products": "Products",
   "earnings": "Earnings",
   "pendingOrders": "Pending Orders",
-  "ordersInProgress": "Orders In Progress"
+  "ordersInProgress": "Orders In Progress",
+  "settings": "Settings",
+  "done": "Done",
+  "remove_item_title": "Remove Item",
+  "remove_item_message": "Are you sure you want to remove this item from your cart?",
+  "item_removed_success": "Item removed successfully",
+  "item_removed_failed": "Failed to remove item",
+  "update_quantity_failed": "Failed to update quantity",
+  "no_name": "No name",
+  "proceed_to_checkout": "Proceed to Checkout",
+  "empty_cart_title": "Your cart is empty",
+  "empty_cart_message": "Looks like you haven’t added anything yet.",
+  "login_prompt": "Please log in to continue"
 }

@@ -91,6 +91,8 @@ class AuthService with ChangeNotifier {
   Map<String, dynamic>? _currentUser;
   Map<String, dynamic>? get user => _currentUser;
 
+  get cart => null;
+
 
 
   // Future<Map<String, dynamic>?> login(String name, String password) async {
@@ -653,6 +655,28 @@ class AuthService with ChangeNotifier {
   //   return response.statusCode == 200;
   // }
 
+  // Future<bool> placeOrder({required String phone, required String address}) async {
+  //   if (user == null) return false;
+  //   final token = await getToken();
+  //   if (token == null) return false;
+  //
+  //   final response = await http.post(
+  //     Uri.parse('$_baseUrl/place-order'),
+  //     headers: {'Accept': 'application/json', 'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+  //     body: jsonEncode({
+  //       'userId': user!['id'],
+  //       'phone': phone,
+  //       'address': address,
+  //     }),
+  //   );
+  //
+  //   if (response.statusCode == 200) {
+  //     await getCartItems();
+  //     return true;
+  //   }
+  //
+  //   return false;
+  // }
   Future<bool> placeOrder({required String phone, required String address}) async {
     if (user == null) return false;
     final token = await getToken();
@@ -667,6 +691,10 @@ class AuthService with ChangeNotifier {
         'address': address,
       }),
     );
+
+    // ADD THESE LINES TO DEBUG
+    print('PLACE ORDER STATUS CODE: ${response.statusCode}');
+    print('PLACE ORDER RESPONSE BODY: ${response.body}');
 
     if (response.statusCode == 200) {
       await getCartItems();

@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:lara_flutter_pro/providers/locale_provider.dart';
+import 'package:lara_flutter_pro/providers/theme_provider.dart';
 import 'package:lara_flutter_pro/screens/attribute_screen.dart';
 import 'package:lara_flutter_pro/screens/category_screen.dart';
 import 'package:lara_flutter_pro/screens/logo_screen.dart';
 import 'package:lara_flutter_pro/screens/product_list_screen.dart';
+import 'package:lara_flutter_pro/screens/auth_wrapper.dart';
 import 'package:provider/provider.dart';
 import '../auth/auth_service.dart';
+
 import '../l10n/app_localizations.dart';
-import 'login_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -56,6 +59,67 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
+  void _showSettingsDialog() {
+    final themeProvider = context.read<ThemeProvider>();
+    final localeProvider = context.read<LocaleProvider>();
+    final localizations = AppLocalizations.of(context)!;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: Text(localizations.settings),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(localizations.appearance, style: Theme.of(context).textTheme.titleMedium),
+                    const SizedBox(height: 10),
+                    SegmentedButton<ThemeMode>(
+                      segments: [
+                        ButtonSegment(value: ThemeMode.light, label: Text(localizations.light), icon: const Icon(Icons.light_mode_outlined)),
+                        ButtonSegment(value: ThemeMode.system, label: Text(localizations.system), icon: const Icon(Icons.brightness_auto_outlined)),
+                        ButtonSegment(value: ThemeMode.dark, label: Text(localizations.dark), icon: const Icon(Icons.dark_mode_outlined)),
+                      ],
+                      selected: {themeProvider.themeMode},
+                      onSelectionChanged: (Set<ThemeMode> newSelection) {
+                        themeProvider.setThemeMode(newSelection.first);
+                        setDialogState(() {});
+                      },
+                    ),
+                    const SizedBox(height: 24),
+                    Text(localizations.language, style: Theme.of(context).textTheme.titleMedium),
+                    const SizedBox(height: 10),
+                    SegmentedButton<Locale>(
+                      segments: [
+                        ButtonSegment(value: const Locale('en'), label: Text(localizations.english)),
+                        ButtonSegment(value: const Locale('km'), label: const Text('ខ្មែរ')),
+                      ],
+                      selected: {localeProvider.locale ?? Localizations.localeOf(context)},
+                      onSelectionChanged: (Set<Locale> newSelection) {
+                        localeProvider.setLocale(newSelection.first);
+                        setDialogState(() {});
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text(localizations.home),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final localizations = AppLocalizations.of(context)!;
@@ -63,16 +127,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(localizations.dashboard), // <-- TRANSLATED
+        title: Text(localizations.dashboard),
         actions: [
           IconButton(
+            icon: const Icon(Icons.settings_outlined),
+            tooltip: localizations.settings,
+            onPressed: _showSettingsDialog,
+          ),
+          IconButton(
             icon: const Icon(Icons.logout),
-            tooltip: localizations.logout, // <-- TRANSLATED
+            tooltip: localizations.logout,
             onPressed: () async {
               await authService.logout();
               if (mounted) {
                 Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (context) => const LoginScreen()),
+                  MaterialPageRoute(builder: (context) => const AuthWrapper()),
                       (Route<dynamic> route) => false,
                 );
               }
@@ -97,20 +166,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
                 subtitle: Text(
-                  _adminUser?['email'] ?? localizations.administratorAccess, // <-- TRANSLATED
+                  _adminUser?['email'] ?? localizations.administratorAccess,
                 ),
               ),
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: () {},
-                style: _buttonStyle(),
-                child: Text(localizations.deliveryPrices), // <-- TRANSLATED
+                style: _buttonStyle(context),
+                child: Text(localizations.deliveryPrices),
               ),
               const SizedBox(height: 8),
               ElevatedButton(
                 onPressed: () {},
-                style: _buttonStyle(),
-                child: Text(localizations.sendNotification), // <-- TRANSLATED
+                style: _buttonStyle(context),
+                child: Text(localizations.sendNotification),
               ),
               const SizedBox(height: 24),
               GridView.count(
@@ -120,26 +189,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 crossAxisSpacing: 16,
                 mainAxisSpacing: 16,
                 children: [
-                  _buildStatCard('0', localizations.users), // <-- TRANSLATED
+                  _buildStatCard('0', localizations.users),
                   InkWell(
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CategoryScreen())).then((_) => _fetchDashboardData()),
-                    child: _buildStatCard(_categoryCount.toString(), localizations.categories), // <-- TRANSLATED
+                    child: _buildStatCard(_categoryCount.toString(), localizations.categories),
                   ),
                   InkWell(
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AttributeScreen())).then((_) => _fetchDashboardData()),
-                    child: _buildStatCard(_attributeCount.toString(), localizations.attributes), // <-- TRANSLATED
+                    child: _buildStatCard(_attributeCount.toString(), localizations.attributes),
                   ),
                   InkWell(
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LogoScreen())).then((_) => _fetchDashboardData()),
-                    child: _buildStatCard(_logoCount.toString(), localizations.logout), // <-- TRANSLATED
+                    child: _buildStatCard(_logoCount.toString(), localizations.logos),
                   ),
                   InkWell(
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProductListScreen())).then((_) => _fetchDashboardData()),
-                    child: _buildStatCard(_productCount.toString(), localizations.products), // <-- TRANSLATED
+                    child: _buildStatCard(_productCount.toString(), localizations.products),
                   ),
-                  _buildStatCard('\$0.00', localizations.earnings), // <-- TRANSLATED
-                  _buildStatCard('0', localizations.pendingOrders), // <-- TRANSLATED
-                  _buildStatCard('0', localizations.ordersInProgress), // <-- TRANSLATED
+                  _buildStatCard('\$0.00', localizations.earnings),
+                  _buildStatCard('0', localizations.pendingOrders),
+                  _buildStatCard('0', localizations.ordersInProgress),
                 ],
               ),
             ],
@@ -157,7 +226,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(value, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
+            Text(value, style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold)),
             const SizedBox(height: 4),
             Text(label, style: Theme.of(context).textTheme.bodyMedium),
           ],
@@ -166,10 +235,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  ButtonStyle _buttonStyle() {
+  ButtonStyle _buttonStyle(BuildContext context) {
     return ElevatedButton.styleFrom(
-      backgroundColor: const Color(0xFFC07F26),
-      foregroundColor: Colors.white,
+      backgroundColor: Theme.of(context).colorScheme.secondary,
+      foregroundColor: Theme.of(context).colorScheme.onSecondary,
       padding: const EdgeInsets.symmetric(vertical: 16),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
       textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),

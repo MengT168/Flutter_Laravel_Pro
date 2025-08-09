@@ -73,5 +73,17 @@
   "products": "ផលិតផល",
   "earnings": "ចំណូល",
   "pendingOrders": "ការបញ្ជាទិញកំពុងរង់ចាំ",
-  "ordersInProgress": "ការបញ្ជាទិញកំពុងដំណើរការ"
+  "ordersInProgress": "ការបញ្ជាទិញកំពុងដំណើរការ",
+  "settings": "ការកំណត់",
+  "done": "រួចរាល់",
+  "remove_item_title": "លុបផលិតផល",
+  "remove_item_message": "តើអ្នកចង់លុបផលិតផលនេះចេញពីរទូរទំនិញរបស់អ្នកមែនទេ?",
+  "item_removed_success": "បានលុបផលិតផលដោយជោគជ័យ",
+  "item_removed_failed": "លុបផលិតផលមិនបានជោគជ័យទេ",
+  "update_quantity_failed": "ការកែប្រែចំនួនបរាជ័យ",
+  "no_name": "គ្មានឈ្មោះ",
+  "proceed_to_checkout": "បន្តទិញទំនិញ",
+  "empty_cart_title": "រទូរទំនិញទទេ",
+  "empty_cart_message": "មិនមានផលិតផលក្នុងរទូរទំនិញទេ។",
+  "login_prompt": "សូមចូលប្រើដើម្បីបន្ត"
 }

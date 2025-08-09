@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:lara_flutter_pro/screens/checkout_screen.dart';
-import 'package:lara_flutter_pro/screens/login_screen.dart';
 import 'package:provider/provider.dart';
 import '../auth/auth_service.dart';
-
-import '../l10n/app_localizations.dart'; // <-- Add this import
+import '../l10n/app_localizations.dart';
+import 'checkout_screen.dart';
+import 'login_screen.dart';
 
 class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
@@ -14,15 +13,15 @@ class CartScreen extends StatefulWidget {
 }
 
 class _CartScreenState extends State<CartScreen> {
-  Map<String, dynamic>? _cartData;
   bool _isLoading = false;
-  int? _updatingItemId;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     final authService = context.watch<AuthService>();
-    if (authService.user != null && _cartData == null && !_isLoading) {
+    if (authService.user != null &&
+        authService.cartData == null &&
+        !_isLoading) {
       _fetchCartItems();
     }
   }
@@ -32,13 +31,8 @@ class _CartScreenState extends State<CartScreen> {
     if (authService.user == null) return;
 
     if (mounted) setState(() => _isLoading = true);
-    final data = await authService.getCartItems();
-    if (mounted) {
-      setState(() {
-        _cartData = data;
-        _isLoading = false;
-      });
-    }
+    await authService.getCartItems();
+    if (mounted) setState(() => _isLoading = false);
   }
 
   void _showSnackbar(String message, bool isSuccess) {
@@ -50,17 +44,20 @@ class _CartScreenState extends State<CartScreen> {
   }
 
   void _removeItem(int cartItemId) async {
-    final localizations = AppLocalizations.of(context)!;
+    final loc = AppLocalizations.of(context)!;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(localizations.removeItem),
-        content: Text(localizations.removeItemConfirm),
+        title: Text(loc.remove_item_title),
+        content: Text(loc.remove_item_message),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(localizations.cancel)),
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(loc.cancel)),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: Text(localizations.remove, style: const TextStyle(color: Colors.red)),
+            child: Text(loc.remove,
+                style: const TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -68,66 +65,48 @@ class _CartScreenState extends State<CartScreen> {
 
     if (confirmed == true) {
       final success = await context.read<AuthService>().removeCartItem(cartItemId);
-      final message = success ? localizations.itemRemovedSuccess : localizations.itemRemovedFail;
-      _showSnackbar(message, success);
+      _showSnackbar(
+        success ? loc.item_removed_success : loc.item_removed_failed,
+        success,
+      );
       if (success) {
         _fetchCartItems();
       }
     }
   }
 
-  void _updateQuantity(int cartItemId, bool increase) async {
-    setState(() => _updatingItemId = cartItemId);
-    final authService = context.read<AuthService>();
-    final success = increase
-        ? await authService.increaseCartItemQuantity(cartItemId)
-        : await authService.decreaseCartItemQuantity(cartItemId);
-
-    if (!success && mounted) {
-      _showSnackbar(AppLocalizations.of(context)!.failedToUpdateQty, false);
-      // We call fetchItems to get the correct server quantity on failure
-      _fetchCartItems();
-    }
-    if(mounted) setState(() => _updatingItemId = null);
-  }
-
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context)!;
     final authService = context.watch<AuthService>();
-    final localizations = AppLocalizations.of(context)!;
-
-    if (authService.user != null && _cartData == null && !_isLoading) {
-      _fetchCartItems();
-    }
-    if (authService.user == null && _cartData != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if(mounted) setState(() => _cartData = null);
-      });
-    }
-
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : Colors.black;
     return Scaffold(
       appBar: AppBar(
-        title: Text(localizations.myCart),
+        title: Text(loc.myCart),
         elevation: 1,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
       ),
-      body: _buildBody(authService, localizations),
+      backgroundColor: Colors.grey[10],
+      body: _buildBody(authService),
     );
   }
 
-  Widget _buildBody(AuthService authService, AppLocalizations localizations) {
+  Widget _buildBody(AuthService authService) {
     if (authService.user == null) {
-      return _buildLoginPrompt(context, localizations);
+      return _buildLoginPrompt(context);
     }
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
-    if (_cartData == null || (_cartData!['items'] as List).isEmpty) {
-      return _buildEmptyCart(context, localizations);
+    if (authService.cartData == null ||
+        (authService.cartData!['items'] as List).isEmpty) {
+      return _buildEmptyCart();
     }
-    return _buildCartView(_cartData!, localizations);
+    return _buildCartView(authService.cartData!);
   }
 
-  Widget _buildCartView(Map<String, dynamic> cartData, AppLocalizations localizations) {
+  Widget _buildCartView(Map<String, dynamic> cartData) {
     final items = cartData['items'] as List;
     final totalAmount = cartData['total_amount'] as num? ?? 0.0;
 
@@ -140,22 +119,50 @@ class _CartScreenState extends State<CartScreen> {
               padding: const EdgeInsets.symmetric(vertical: 8.0),
               itemCount: items.length,
               itemBuilder: (context, index) {
-                return _CartItemCard(item: items[index], localizations: localizations);
+                return _CartItemCard(
+                  item: items[index],
+                  onRemove: _removeItem,
+                  onQuantityChange: (cartItemId, increase) {
+                    _updateQuantity(items[index], increase);
+                  },
+                );
               },
             ),
           ),
         ),
-        _buildSummaryCard(totalAmount.toDouble(), localizations),
+        _buildSummaryCard(totalAmount.toDouble()),
       ],
     );
   }
 
-  Widget _CartItemCard({required Map<String, dynamic> item, required AppLocalizations localizations}) {
-    final imageUrl = item['thumbnail_url'];
-    final bool isUpdating = _updatingItemId == item['cart_item_id'];
+  void _updateQuantity(Map<String, dynamic> item, bool increase) {
+    final oldQty = item['quantity'];
+    setState(() => item['quantity'] = increase ? oldQty + 1 : oldQty - 1);
 
+    final authService = context.read<AuthService>();
+    final Future<bool> future = increase
+        ? authService.increaseCartItemQuantity(item['cart_item_id'])
+        : authService.decreaseCartItemQuantity(item['cart_item_id']);
+
+    future.then((success) {
+      if (!success) {
+        setState(() => item['quantity'] = oldQty); // Rollback
+        _showSnackbar(AppLocalizations.of(context)!.update_quantity_failed, false);
+      }
+    });
+  }
+
+  Widget _CartItemCard({
+    required Map<String, dynamic> item,
+    required Function(int) onRemove,
+    required Function(int, bool) onQuantityChange,
+  }) {
+    final loc = AppLocalizations.of(context)!;
+    final imageUrl = item['thumbnail_url'];
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(8.0),
         child: Row(
@@ -163,32 +170,69 @@ class _CartScreenState extends State<CartScreen> {
             ClipRRect(
               borderRadius: BorderRadius.circular(8.0),
               child: (imageUrl != null && imageUrl.isNotEmpty)
-                  ? Image.network(imageUrl, width: 80, height: 80, fit: BoxFit.cover)
-                  : Image.asset('assets/images/placeholder.png', width: 80, height: 80, fit: BoxFit.cover),
+                  ? Image.network(
+                imageUrl,
+                width: 80,
+                height: 80,
+                fit: BoxFit.cover,
+                errorBuilder: (c, e, s) => Image.asset(
+                    'assets/images/default-image.jpg',
+                    width: 80,
+                    height: 80,
+                    fit: BoxFit.cover),
+              )
+                  : Image.asset('assets/images/default-image.jpg',
+                  width: 80, height: 80, fit: BoxFit.cover),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(item['product_name'] ?? 'No Name', maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  Text(
+                    item['product_name'] ?? loc.no_name,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 16),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                   const SizedBox(height: 4),
-                  Text('\$${item['price']}', style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 14)),
+                  Text('\$${item['price']}',
+                      style: TextStyle(
+                          color: Theme.of(context).colorScheme.primary,
+                          fontSize: 14)),
                   TextButton(
-                    onPressed: () => _removeItem(item['cart_item_id']),
-                    style: TextButton.styleFrom(padding: EdgeInsets.zero, visualDensity: VisualDensity.compact, foregroundColor: Theme.of(context).colorScheme.error),
-                    child: Text(localizations.remove, style: const TextStyle(fontSize: 12)),
+                    onPressed: () => onRemove(item['cart_item_id']),
+                    style: TextButton.styleFrom(
+                        padding: EdgeInsets.zero,
+                        visualDensity: VisualDensity.compact,
+                        foregroundColor: Colors.red),
+                    child: Text(loc.remove, style: const TextStyle(fontSize: 12)),
                   ),
                 ],
               ),
             ),
-            isUpdating
-                ? const SizedBox(width: 96, child: Center(child: SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))))
-                : Row(
+            Row(
               children: [
-                IconButton(icon: const Icon(Icons.remove_circle_outline, size: 22), onPressed: item['quantity'] > 1 ? () => _updateQuantity(item['cart_item_id'], false) : null),
-                Text('${item['quantity']}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                IconButton(icon: const Icon(Icons.add_circle_outline, size: 22), onPressed: () => _updateQuantity(item['cart_item_id'], true)),
+                IconButton(
+                  icon: Icon(Icons.remove_circle_outline,
+                      size: 22,
+                      color: Theme.of(context)
+                          .iconTheme
+                          .color
+                          ?.withOpacity(0.6)),
+                  onPressed: item['quantity'] > 1
+                      ? () => onQuantityChange(item['cart_item_id'], false)
+                      : null,
+                ),
+                Text('${item['quantity']}',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 16)),
+                IconButton(
+                  icon: const Icon(Icons.add_circle_outline, size: 22),
+                  onPressed: () =>
+                      onQuantityChange(item['cart_item_id'], true),
+                ),
               ],
             )
           ],
@@ -197,32 +241,44 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 
-  Widget _buildSummaryCard(double total, AppLocalizations localizations) {
+  Widget _buildSummaryCard(double total) {
+    final loc = AppLocalizations.of(context)!;
     const double shipping = 5.00;
     return Card(
       margin: const EdgeInsets.all(0),
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       elevation: 8,
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
         child: Column(
           children: [
-            _buildSummaryRow(context, localizations.subtotal, '\$${total.toStringAsFixed(2)}'),
+            _buildSummaryRow(context, loc.subtotal,
+                '\$${total.toStringAsFixed(2)}'),
             const SizedBox(height: 8),
-            _buildSummaryRow(context, localizations.shipping, '\$${shipping.toStringAsFixed(2)}'),
+            _buildSummaryRow(context, loc.shipping,
+                '\$${shipping.toStringAsFixed(2)}'),
             const Divider(height: 24),
-            _buildSummaryRow(context, localizations.total, '\$${(total + shipping).toStringAsFixed(2)}', isTotal: true),
+            _buildSummaryRow(context, loc.total,
+                '\$${(total + shipping).toStringAsFixed(2)}',
+                isTotal: true),
             const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,
               height: 50,
               child: ElevatedButton(
-                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CheckoutScreen())),
+                onPressed: () {
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const CheckoutScreen()));
+                },
                 style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).colorScheme.primary,
-                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30))),
-                child: Text(localizations.proceedToCheckout, style: const TextStyle(fontSize: 16)),
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                ),
+                child: Text(loc.proceed_to_checkout,
+                    style: const TextStyle(fontSize: 16)),
               ),
             )
           ],
@@ -231,7 +287,8 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 
-  Widget _buildSummaryRow(BuildContext context, String label, String value, {bool isTotal = false}) {
+  Widget _buildSummaryRow(BuildContext context, String label, String value,
+      {bool isTotal = false}) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textColor = isDark ? Colors.white : Colors.black;
 
@@ -258,33 +315,56 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 
-  Widget _buildEmptyCart(BuildContext context, AppLocalizations localizations) {
+  Widget _buildEmptyCart() {
+    final loc = AppLocalizations.of(context)!;
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.production_quantity_limits, size: 100, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
+          Icon(Icons.production_quantity_limits,
+              size: 100,
+              color: Theme.of(context).colorScheme.onSurfaceVariant),
           const SizedBox(height: 16),
-          Text(localizations.cartIsEmpty, style: Theme.of(context).textTheme.headlineSmall),
+          Text(loc.empty_cart_title,
+              style: Theme.of(context).textTheme.headlineSmall),
           const SizedBox(height: 8),
-          Text(localizations.cartIsEmptyMessage, textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodyMedium),
+          Text(
+            loc.empty_cart_message,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildLoginPrompt(BuildContext context, AppLocalizations localizations) {
+  Widget _buildLoginPrompt(BuildContext context) {
+    final loc = AppLocalizations.of(context)!;
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.shopping_cart_outlined, size: 80, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
+          Icon(Icons.shopping_cart_outlined,
+              size: 80,
+              color: Theme.of(context).colorScheme.onSurfaceVariant),
           const SizedBox(height: 16),
-          Text(localizations.loginToViewCart, style: Theme.of(context).textTheme.bodyMedium),
+          Text(loc.login_prompt,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                fontSize: 16,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              )),
           const SizedBox(height: 16),
           ElevatedButton(
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LoginScreen(isPoppingOnSuccess: true))),
-            child: Text(localizations.loginOrRegister),
+            onPressed: () {
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) =>
+                      const LoginScreen(isPoppingOnSuccess: true)));
+            },
+            child: Text(loc.loginOrRegister),
           ),
         ],
       ),

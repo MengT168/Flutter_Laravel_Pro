@@ -248,4 +248,41 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get ordersInProgress => 'Orders In Progress';
+
+  @override
+  String get settings => 'Settings';
+
+  @override
+  String get done => 'Done';
+
+  @override
+  String get remove_item_title => 'Remove Item';
+
+  @override
+  String get remove_item_message =>
+      'Are you sure you want to remove this item from your cart?';
+
+  @override
+  String get item_removed_success => 'Item removed successfully';
+
+  @override
+  String get item_removed_failed => 'Failed to remove item';
+
+  @override
+  String get update_quantity_failed => 'Failed to update quantity';
+
+  @override
+  String get no_name => 'No name';
+
+  @override
+  String get proceed_to_checkout => 'Proceed to Checkout';
+
+  @override
+  String get empty_cart_title => 'Your cart is empty';
+
+  @override
+  String get empty_cart_message => 'Looks like you haven’t added anything yet.';
+
+  @override
+  String get login_prompt => 'Please log in to continue';
 }

@@ -553,6 +553,78 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Orders In Progress'**
   String get ordersInProgress;
+
+  /// No description provided for @settings.
+  ///
+  /// In en, this message translates to:
+  /// **'Settings'**
+  String get settings;
+
+  /// No description provided for @done.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get done;
+
+  /// No description provided for @remove_item_title.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove Item'**
+  String get remove_item_title;
+
+  /// No description provided for @remove_item_message.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to remove this item from your cart?'**
+  String get remove_item_message;
+
+  /// No description provided for @item_removed_success.
+  ///
+  /// In en, this message translates to:
+  /// **'Item removed successfully'**
+  String get item_removed_success;
+
+  /// No description provided for @item_removed_failed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to remove item'**
+  String get item_removed_failed;
+
+  /// No description provided for @update_quantity_failed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to update quantity'**
+  String get update_quantity_failed;
+
+  /// No description provided for @no_name.
+  ///
+  /// In en, this message translates to:
+  /// **'No name'**
+  String get no_name;
+
+  /// No description provided for @proceed_to_checkout.
+  ///
+  /// In en, this message translates to:
+  /// **'Proceed to Checkout'**
+  String get proceed_to_checkout;
+
+  /// No description provided for @empty_cart_title.
+  ///
+  /// In en, this message translates to:
+  /// **'Your cart is empty'**
+  String get empty_cart_title;
+
+  /// No description provided for @empty_cart_message.
+  ///
+  /// In en, this message translates to:
+  /// **'Looks like you haven’t added anything yet.'**
+  String get empty_cart_message;
+
+  /// No description provided for @login_prompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Please log in to continue'**
+  String get login_prompt;
 }
 
 class _AppLocalizationsDelegate
