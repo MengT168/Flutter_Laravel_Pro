@@ -3,6 +3,8 @@ import 'package:lara_flutter_pro/screens/login_screen.dart';
 import 'package:provider/provider.dart';
 import '../auth/auth_service.dart';
 
+import '../l10n/app_localizations.dart'; // <-- Add this import
+
 class OrderScreen extends StatefulWidget {
   const OrderScreen({super.key});
 
@@ -35,14 +37,15 @@ class _OrderScreenState extends State<OrderScreen> {
   }
 
   void _cancelOrder(int orderId) async {
+    final localizations = AppLocalizations.of(context)!;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Cancel Order?'),
-        content: const Text('Are you sure you want to cancel this order?'),
+        title: Text(localizations.cancelOrder), // <-- TRANSLATED
+        content: Text(localizations.cancelOrderConfirm), // <-- TRANSLATED
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('No')),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Yes, Cancel', style: TextStyle(color: Colors.red))),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(localizations.no)), // <-- TRANSLATED
+          TextButton(onPressed: () => Navigator.pop(context, true), child: Text(localizations.yesCancel, style: const TextStyle(color: Colors.red))), // <-- TRANSLATED
         ],
       ),
     );
@@ -50,8 +53,9 @@ class _OrderScreenState extends State<OrderScreen> {
     if(confirmed == true) {
       final success = await context.read<AuthService>().cancelOrder(orderId);
       if (mounted) {
+        final message = success ? localizations.orderCancellationSuccess : localizations.orderCancellationFail; // <-- TRANSLATED
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Order cancellation ${success ? 'successful' : 'failed'}'),
+          content: Text(message),
           backgroundColor: success ? Colors.green : Colors.red,
         ));
       }
@@ -62,44 +66,41 @@ class _OrderScreenState extends State<OrderScreen> {
   @override
   Widget build(BuildContext context) {
     final authService = context.watch<AuthService>();
+    final localizations = AppLocalizations.of(context)!;
 
-    // THE FIX: Always return a Scaffold as the main widget.
     return Scaffold(
-      appBar: AppBar(title: const Text('My Orders')),
-      // Only the body will change based on the login state.
+      appBar: AppBar(title: Text(localizations.myOrders)), // <-- TRANSLATED
       body: authService.user == null
-          ? _buildLoginPrompt()
+          ? _buildLoginPrompt(localizations)
           : _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : _buildOrderList(),
+          : _buildOrderList(localizations),
     );
   }
 
-  /// A widget to show when the user is not logged in.
-  Widget _buildLoginPrompt() {
+  Widget _buildLoginPrompt(AppLocalizations localizations) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           const Icon(Icons.receipt_long_outlined, size: 80, color: Colors.grey),
           const SizedBox(height: 16),
-          const Text("Login to see your order history.", style: TextStyle(fontSize: 16, color: Colors.grey)),
+          Text(localizations.loginToViewOrders, style: const TextStyle(fontSize: 16, color: Colors.grey)), // <-- TRANSLATED
           const SizedBox(height: 16),
           ElevatedButton(
             onPressed: () {
               Navigator.push(context, MaterialPageRoute(builder: (_) => const LoginScreen(isPoppingOnSuccess: true)));
             },
-            child: const Text('Login / Register'),
+            child: Text(AppLocalizations.of(context)!.loginOrRegister), // <-- TRANSLATED
           ),
         ],
       ),
     );
   }
 
-  /// A widget to show the list of orders.
-  Widget _buildOrderList() {
+  Widget _buildOrderList(AppLocalizations localizations) {
     if (_orders.isEmpty) {
-      return const Center(child: Text('You have no orders yet.'));
+      return Center(child: Text(localizations.youHaveNoOrders)); // <-- TRANSLATED
     }
 
     return RefreshIndicator(
@@ -120,7 +121,7 @@ class _OrderScreenState extends State<OrderScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Order #${order['transaction_id']}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                      Text(localizations.orderNumber(order['transaction_id'].toString()), style: const TextStyle(fontWeight: FontWeight.bold)), // <-- TRANSLATED
                       Chip(
                         label: Text(order['status'], style: const TextStyle(color: Colors.white, fontSize: 12)),
                         backgroundColor: isPending ? Colors.orange : (order['status'] == 'cancel' ? Colors.red : Colors.green),
@@ -128,11 +129,11 @@ class _OrderScreenState extends State<OrderScreen> {
                     ],
                   ),
                   const Divider(),
-                  Text('Recipient: ${order['fullname']}'),
-                  Text('Phone: ${order['phone']}'),
-                  Text('Address: ${order['address']}'),
-                  Text('Total: \$${order['total_amount']}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                  Text('Date: ${order['created_at']}'), // You might want to format this date
+                  Text(localizations.recipient(order['fullname'] ?? '')), // <-- TRANSLATED
+                  Text(localizations.phone(order['phone'] ?? '')), // <-- TRANSLATED
+                  Text(localizations.address(order['address'] ?? '')), // <-- TRANSLATED
+                  Text('${localizations.total}: \$${order['total_amount']}', style: const TextStyle(fontWeight: FontWeight.bold)), // <-- TRANSLATED
+                  Text(localizations.date(order['created_at'] ?? '')), // <-- TRANSLATED
                   if (isPending)
                     Padding(
                       padding: const EdgeInsets.only(top: 8.0),
@@ -141,7 +142,7 @@ class _OrderScreenState extends State<OrderScreen> {
                         child: OutlinedButton(
                           onPressed: () => _cancelOrder(order['id']),
                           style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
-                          child: const Text('Cancel Order'),
+                          child: Text(localizations.cancelOrder), // <-- TRANSLATED
                         ),
                       ),
                     ),

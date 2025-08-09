@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:lara_flutter_pro/screens/main_screen.dart';
 
+import '../l10n/app_localizations.dart'; // <-- Add this import
+
 class OrderSuccessScreen extends StatelessWidget {
   const OrderSuccessScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context)!;
+
     return Scaffold(
       body: Center(
         child: Column(
@@ -13,9 +17,12 @@ class OrderSuccessScreen extends StatelessWidget {
           children: [
             const Icon(Icons.check_circle, color: Colors.green, size: 100),
             const SizedBox(height: 24),
-            const Text('Order Placed Successfully!', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+            Text(
+                localizations.orderPlacedSuccess, // <-- TRANSLATED
+                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)
+            ),
             const SizedBox(height: 8),
-            const Text('Thank you for your purchase.'),
+            Text(localizations.thankYouPurchase), // <-- TRANSLATED
             const SizedBox(height: 32),
             ElevatedButton(
               onPressed: () {
@@ -25,7 +32,7 @@ class OrderSuccessScreen extends StatelessWidget {
                       (route) => false,
                 );
               },
-              child: const Text('Continue Shopping'),
+              child: Text(localizations.continueShopping), // <-- TRANSLATED
             )
           ],
         ),

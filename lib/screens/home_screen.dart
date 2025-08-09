@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
-
-import 'package:lara_flutter_pro/screens/login_screen.dart';
 import 'package:lara_flutter_pro/screens/product_detail_screen.dart';
 import 'package:lara_flutter_pro/screens/search_screen.dart';
-import 'package:lara_flutter_pro/screens/favorite_screen.dart'; // Import FavoriteScreen
-import 'package:provider/provider.dart'; // Import Provider
+import 'package:lara_flutter_pro/screens/favorite_screen.dart';
+import 'package:provider/provider.dart';
 import '../auth/auth_service.dart';
 import '../l10n/app_localizations.dart';
+import 'login_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -48,10 +47,11 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final authService = context.watch<AuthService>();
+    final localizations = AppLocalizations.of(context)!; // Helper for easier access
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(AppLocalizations.of(context)!.myShop),
+        title: Text(localizations.myShop), // <-- TRANSLATED
         actions: [
           IconButton(
             icon: const Icon(Icons.search),
@@ -81,13 +81,13 @@ class _HomeScreenState extends State<HomeScreen> {
         child: ListView(
           children: [
             const SizedBox(height: 16),
-            _buildSectionHeader('New Arrivals'),
+            _buildSectionHeader(localizations.newArrivals), // <-- TRANSLATED
             _buildProductCarousel(_products['new_products'] ?? []),
             const SizedBox(height: 16),
-            _buildSectionHeader('Promotions'),
+            _buildSectionHeader(localizations.promotions), // <-- TRANSLATED
             _buildProductCarousel(_products['promotion_products'] ?? []),
             const SizedBox(height: 16),
-            _buildSectionHeader('Popular Products'),
+            _buildSectionHeader(localizations.popularProducts), // <-- TRANSLATED
             _buildProductCarousel(_products['popular_products'] ?? []),
             const SizedBox(height: 16),
           ],
@@ -103,7 +103,7 @@ class _HomeScreenState extends State<HomeScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          TextButton(onPressed: () {}, child: const Text('See All')),
+          TextButton(onPressed: () {}, child: Text(AppLocalizations.of(context)!.seeAll)), // <-- TRANSLATED
         ],
       ),
     );
@@ -126,7 +126,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 }
-
 /// A reusable widget for displaying a single, clickable product card.
 class ProductCard extends StatelessWidget {
   final Map<String, dynamic> product;

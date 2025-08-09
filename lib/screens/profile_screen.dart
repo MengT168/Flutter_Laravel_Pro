@@ -11,33 +11,35 @@ class ProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // This line "watches" AuthService for changes and rebuilds the screen automatically.
     final authService = context.watch<AuthService>();
     final user = authService.user;
+    final localizations = AppLocalizations.of(context)!;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(AppLocalizations.of(context)!.profile),
-        // REMOVED: backgroundColor and foregroundColor to let the theme handle it
-        elevation: 0,
+        title: Text(localizations.profile),
         actions: [
+          // Only show the logout button if the user is logged in
           if (user != null)
             IconButton(
               icon: const Icon(Icons.logout),
               tooltip: 'Logout',
               onPressed: () {
+                // Call logout directly from the provider.
                 context.read<AuthService>().logout();
               },
             ),
         ],
       ),
       body: user == null
-          ? _buildLoginPrompt(context)
-          : _buildProfileView(context, user),
+          ? _buildLoginPrompt(context, localizations)
+          : _buildProfileView(context, user, localizations),
     );
   }
 
   /// A widget to show when the user is not logged in.
-  Widget _buildLoginPrompt(BuildContext context) {
+  Widget _buildLoginPrompt(BuildContext context, AppLocalizations localizations) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -45,13 +47,11 @@ class ProfileScreen extends StatelessWidget {
           Icon(
             Icons.person_off_outlined,
             size: 80,
-            // Use a theme color that adapts
             color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
           ),
           const SizedBox(height: 16),
           Text(
-            'You are not logged in.',
-            // Use a theme text style that adapts
+            localizations.youAreNotLoggedIn,
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 24),
@@ -64,7 +64,7 @@ class ProfileScreen extends StatelessWidget {
                 ),
               );
             },
-            child: const Text('Login or Register'),
+            child: Text(localizations.loginOrRegister),
           ),
         ],
       ),
@@ -72,7 +72,7 @@ class ProfileScreen extends StatelessWidget {
   }
 
   /// The widget to show the user's profile information.
-  Widget _buildProfileView(BuildContext context, Map<String, dynamic> user) {
+  Widget _buildProfileView(BuildContext context, Map<String, dynamic> user, AppLocalizations localizations) {
     final name = user['name'] ?? 'N/A';
     final email = user['email'] ?? 'N/A';
 
@@ -83,13 +83,13 @@ class ProfileScreen extends StatelessWidget {
         children: [
           _buildProfileAvatar(context, user),
           const SizedBox(height: 40),
-          _buildInfoRow(context, 'Username', name),
-          _buildInfoRow(context, 'Email', email),
-          _buildInfoRow(context, 'Phone', 'Not Provided'),
-          _buildInfoRow(context, 'Date of birth', 'Not Provided'),
-          _buildInfoRow(context, 'Address', 'Not Provided'),
+          _buildInfoRow(context, localizations.username, name),
+          _buildInfoRow(context, localizations.email, email),
+          // _buildInfoRow(context, localizations.phone as String, 'Not Provided'),
+          _buildInfoRow(context, localizations.dateOfBirth, 'Not Provided'),
+          // _buildInfoRow(context, localizations.address as String, 'Not Provided'),
           const Divider(height: 40),
-          _buildSettingsSection(context),
+          _buildSettingsSection(context, localizations),
         ],
       ),
     );
@@ -110,7 +110,6 @@ class ProfileScreen extends StatelessWidget {
             right: 0,
             child: CircleAvatar(
               radius: 20,
-              // Use the theme's secondary color
               backgroundColor: Theme.of(context).colorScheme.secondary,
               child: IconButton(
                 icon: Icon(Icons.camera_alt, color: Theme.of(context).colorScheme.onSecondary, size: 20),
@@ -129,29 +128,26 @@ class ProfileScreen extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Use the theme's text style for less important text
           Text(label, style: Theme.of(context).textTheme.bodyMedium),
-          // Use the theme's text style for the main text
           Text(value, style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w500)),
         ],
       ),
     );
   }
 
-  Widget _buildSettingsSection(BuildContext context) {
-    // This section was already using theme-aware widgets, so it's fine
+  Widget _buildSettingsSection(BuildContext context, AppLocalizations localizations) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text("Appearance", style: Theme.of(context).textTheme.titleLarge),
+        Text(localizations.appearance, style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 10),
         Consumer<ThemeProvider>(
           builder: (context, themeProvider, child) {
             return SegmentedButton<ThemeMode>(
-              segments: const [
-                ButtonSegment(value: ThemeMode.light, label: Text('Light'), icon: Icon(Icons.light_mode_outlined)),
-                ButtonSegment(value: ThemeMode.system, label: Text('System'), icon: Icon(Icons.brightness_auto_outlined)),
-                ButtonSegment(value: ThemeMode.dark, label: Text('Dark'), icon: Icon(Icons.dark_mode_outlined)),
+              segments: [
+                ButtonSegment(value: ThemeMode.light, label: Text(localizations.light), icon: const Icon(Icons.light_mode_outlined)),
+                ButtonSegment(value: ThemeMode.system, label: Text(localizations.system), icon: const Icon(Icons.brightness_auto_outlined)),
+                ButtonSegment(value: ThemeMode.dark, label: Text(localizations.dark), icon: const Icon(Icons.dark_mode_outlined)),
               ],
               selected: {themeProvider.themeMode},
               onSelectionChanged: (Set<ThemeMode> newSelection) {
@@ -160,13 +156,15 @@ class ProfileScreen extends StatelessWidget {
             );
           },
         ),
+
         const SizedBox(height: 24),
-        Text("Language", style: Theme.of(context).textTheme.titleLarge),
+
+        Text(localizations.language, style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 10),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            ElevatedButton(onPressed: () => context.read<LocaleProvider>().setLocale(const Locale('en')), child: const Text('English')),
+            ElevatedButton(onPressed: () => context.read<LocaleProvider>().setLocale(const Locale('en')), child: Text(localizations.english)),
             const SizedBox(width: 16),
             ElevatedButton(onPressed: () => context.read<LocaleProvider>().setLocale(const Locale('km')), child: const Text('ខ្មែរ')),
           ],
