@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lara_flutter_pro/providers/locale_provider.dart';
 import 'package:lara_flutter_pro/providers/theme_provider.dart';
+import 'package:lara_flutter_pro/screens/admin_order_screen.dart';
 import 'package:lara_flutter_pro/screens/attribute_screen.dart';
 import 'package:lara_flutter_pro/screens/category_screen.dart';
 import 'package:lara_flutter_pro/screens/logo_screen.dart';
@@ -24,6 +25,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   int _attributeCount = 0;
   int _logoCount = 0;
   int _productCount = 0;
+  int _pendingOrderCount = 0;
   bool _isLoading = true;
 
   @override
@@ -36,12 +38,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (mounted) setState(() => _isLoading = true);
     final authService = context.read<AuthService>();
     try {
+      // Fetch all data points at the same time for efficiency
       final results = await Future.wait([
         authService.getCurrentUser(),
         authService.getCategories(),
         authService.getAttributes(),
         authService.getLogos(),
         authService.getProducts(),
+        authService.getListOrder(), // <-- Fetch order data
       ]);
 
       if (mounted) {
@@ -51,6 +55,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
           _attributeCount = (results[2] as List).length;
           _logoCount = (results[3] as List).length;
           _productCount = (results[4] as List).length;
+          final orderData = results[5] as Map<String, dynamic>?;
+          _pendingOrderCount = orderData?['pending_count'] ?? 0; // <-- Store pending order count
           _isLoading = false;
         });
       }
@@ -195,19 +201,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     child: _buildStatCard(_categoryCount.toString(), localizations.categories),
                   ),
                   InkWell(
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AttributeScreen())).then((_) => _fetchDashboardData()),
-                    child: _buildStatCard(_attributeCount.toString(), localizations.attributes),
-                  ),
-                  InkWell(
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LogoScreen())).then((_) => _fetchDashboardData()),
-                    child: _buildStatCard(_logoCount.toString(), localizations.logos),
-                  ),
-                  InkWell(
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProductListScreen())).then((_) => _fetchDashboardData()),
                     child: _buildStatCard(_productCount.toString(), localizations.products),
                   ),
                   _buildStatCard('\$0.00', localizations.earnings),
-                  _buildStatCard('0', localizations.pendingOrders),
+                  // THE NEW MANAGE ORDERS CARD
+                  InkWell(
+                    onTap: () {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminOrderScreen()))
+                          .then((_) => _fetchDashboardData());
+                    },
+                    borderRadius: BorderRadius.circular(12),
+                    child: _buildStatCard(
+                      _pendingOrderCount.toString(),
+                      localizations.pendingOrders,
+                    ),
+                  ),
                   _buildStatCard('0', localizations.ordersInProgress),
                 ],
               ),

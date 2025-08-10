@@ -692,7 +692,6 @@ class AuthService with ChangeNotifier {
       }),
     );
 
-    // ADD THESE LINES TO DEBUG
     print('PLACE ORDER STATUS CODE: ${response.statusCode}');
     print('PLACE ORDER RESPONSE BODY: ${response.body}');
 
@@ -831,6 +830,43 @@ class AuthService with ChangeNotifier {
 
     // Re-fetch the official list from the server to ensure consistency
     await getFavorites();
+  }
+
+  Future<Map<String, dynamic>?> getListOrder() async {
+    final token = await getToken();
+    if (token == null) return null;
+
+    final response = await http.get(
+      Uri.parse('$_baseUrl/admin/list-order'),
+      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+    return null;
+  }
+
+  Future<bool> acceptOrder(int orderId) async {
+    final token = await getToken();
+    if (token == null) return false;
+
+    final response = await http.get( // Your route uses GET
+      Uri.parse('$_baseUrl/admin/access-order/$orderId'),
+      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
+    );
+    return response.statusCode == 200;
+  }
+
+  Future<bool> rejectOrder(int orderId) async {
+    final token = await getToken();
+    if (token == null) return false;
+
+    final response = await http.post( // Your route uses POST
+      Uri.parse('$_baseUrl/admin/reject-order/$orderId'),
+      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
+    );
+    return response.statusCode == 200;
   }
 }
 
