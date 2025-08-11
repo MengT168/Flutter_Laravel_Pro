@@ -201,6 +201,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     child: _buildStatCard(_categoryCount.toString(), localizations.categories),
                   ),
                   InkWell(
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AttributeScreen())).then((_) => _fetchDashboardData()),
+                    child: _buildStatCard(_attributeCount.toString(), localizations.attributes),
+                  ),
+                  InkWell(
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LogoScreen())).then((_) => _fetchDashboardData()),
+                    child: _buildStatCard(_logoCount.toString(), localizations.logos),
+                  ),
+                  InkWell(
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProductListScreen())).then((_) => _fetchDashboardData()),
                     child: _buildStatCard(_productCount.toString(), localizations.products),
                   ),
