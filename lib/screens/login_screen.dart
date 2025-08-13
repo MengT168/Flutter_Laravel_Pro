@@ -2,13 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:lara_flutter_pro/screens/dashboard_screen.dart';
 import 'package:lara_flutter_pro/screens/main_screen.dart';
 import 'package:lara_flutter_pro/screens/register_screen.dart';
+import 'package:provider/provider.dart';
 import '../auth/auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
-  /// If true, the screen will pop back on a successful login, returning 'true'.
-  /// If false (default), it will navigate to the main app screen.
   final bool isPoppingOnSuccess;
-
   const LoginScreen({super.key, this.isPoppingOnSuccess = false});
 
   @override
@@ -18,65 +16,66 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _nameController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _authService = AuthService();
   bool _isPasswordVisible = false;
   bool _isLoggingIn = false;
+  bool _isFacebookLoggingIn = false;
 
   void _login() async {
-    // Prevent multiple clicks while logging in
-    if (_isLoggingIn) return;
+    if (_isLoggingIn || _isFacebookLoggingIn) return;
     setState(() => _isLoggingIn = true);
 
-    final Map<String, dynamic>? userData = await _authService.login(
+    final authService = context.read<AuthService>();
+    final userData = await authService.login(
       _nameController.text,
       _passwordController.text,
     );
 
-    // Re-enable the button after the API call is complete
-    if (mounted) {
-      setState(() => _isLoggingIn = false);
-    }
+    if (mounted) setState(() => _isLoggingIn = false);
 
     if (userData != null) {
-      // THE FIX: Correctly check for the boolean 'true'
-      final bool isAdmin = userData['is_admin'] == true;
-
-      // Highest priority: If the user is an admin, always go to the dashboard.
-      if (isAdmin) {
-        if (mounted) {
-          Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(builder: (context) => const DashboardScreen()),
-                (Route<dynamic> route) => false, // This removes all previous screens
-          );
-        }
-        return; // Stop the function here.
-      }
-
-      // If not an admin, check how this screen was opened.
-      if (widget.isPoppingOnSuccess) {
-        if (mounted) {
-          // Go back to the screen that opened it (e.g., ProductDetailScreen)
-          // and return 'true' to indicate success.
-          Navigator.pop(context, true);
-        }
-      } else {
-        // Fallback for a normal user logging in for the first time.
-        if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const MainScreen()),
-          );
-        }
-      }
+      _handleLoginSuccess(userData);
     } else {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Login Failed. Please check your credentials.'),
-            backgroundColor: Colors.red,
-          ),
+          const SnackBar(content: Text('Login Failed. Please check your credentials.')),
         );
+      }
+    }
+  }
+
+  void _loginWithFacebook() async {
+    if (_isFacebookLoggingIn || _isLoggingIn) return;
+    setState(() => _isFacebookLoggingIn = true);
+
+    final authService = context.read<AuthService>();
+
+    // THE FIX: The function returns user data (a Map), not a boolean.
+    final Map<String, dynamic>? userData = await authService.loginWithFacebook();
+
+    if (mounted) setState(() => _isFacebookLoggingIn = false);
+
+    // THE FIX: Check if the userData is not null.
+    if (userData != null) {
+      _handleLoginSuccess(userData);
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Facebook Login Failed. Please try again.')),
+        );
+      }
+    }
+  }
+
+  // This shared method handles navigation after any successful login
+  void _handleLoginSuccess(Map<String, dynamic> userData) {
+    final bool isAdmin = userData['is_admin'] == 1;
+    if (isAdmin) {
+      if (mounted) Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (context) => const DashboardScreen()), (route) => false);
+    } else {
+      if (widget.isPoppingOnSuccess) {
+        if (mounted) Navigator.pop(context, true);
+      } else {
+        if (mounted) Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const MainScreen()));
       }
     }
   }
@@ -85,7 +84,6 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        // Only show a back button if this screen was pushed on top of another
         automaticallyImplyLeading: widget.isPoppingOnSuccess,
         backgroundColor: Colors.white,
         elevation: 0,
@@ -122,7 +120,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 24),
                 ElevatedButton(
-                  onPressed: _isLoggingIn ? null : _login, // Disable button while logging in
+                  onPressed: _isLoggingIn || _isFacebookLoggingIn ? null : _login,
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     backgroundColor: const Color(0xFF1E232C),
@@ -131,6 +129,19 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: _isLoggingIn
                       ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                       : const Text('Sign in', style: TextStyle(fontSize: 18, color: Colors.white)),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.facebook, color: Colors.white),
+                  label: _isFacebookLoggingIn
+                      ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : const Text('Login with Facebook', style: TextStyle(fontSize: 18, color: Colors.white)),
+                  onPressed: _isLoggingIn || _isFacebookLoggingIn ? null : _loginWithFacebook,
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    backgroundColor: const Color(0xFF1877F2), // Facebook Blue
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
                 ),
                 const SizedBox(height: 24),
                 Row(

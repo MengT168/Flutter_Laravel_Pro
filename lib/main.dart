@@ -3,13 +3,14 @@ import 'package:lara_flutter_pro/auth/auth_service.dart';
 import 'package:lara_flutter_pro/providers/locale_provider.dart';
 import 'package:lara_flutter_pro/providers/theme_provider.dart';
 import 'package:lara_flutter_pro/screens/auth_wrapper.dart';
-
+import 'package:web/web.dart' as web;
 import 'package:lara_flutter_pro/theme/theme.dart';
 import 'package:provider/provider.dart';
 
 import 'l10n/app_localizations.dart';
 
 void main() {
+  printWebDomain();
   runApp(
     MultiProvider(
       providers: [
@@ -45,4 +46,11 @@ class MyApp extends StatelessWidget {
       home: const AuthWrapper(),
     );
   }
+}
+
+
+
+void printWebDomain() {
+  final origin = web.window.location.origin;
+  print(origin); // Example: http://localhost:5555 or https://myapp.com
 }

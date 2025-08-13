@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html>
+<head><title>Authentication Success</title></head>
+<body>
+<script>
+    const data = window.location.hash.substring(1);
+    window.opener.postMessage(data, '*');
+    window.close();
+</script>
+<p>Please wait...</p>
+</body>
+</html>
