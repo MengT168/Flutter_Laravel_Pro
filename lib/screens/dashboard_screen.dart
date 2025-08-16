@@ -7,10 +7,12 @@ import 'package:lara_flutter_pro/screens/category_screen.dart';
 import 'package:lara_flutter_pro/screens/logo_screen.dart';
 import 'package:lara_flutter_pro/screens/product_list_screen.dart';
 import 'package:lara_flutter_pro/screens/auth_wrapper.dart';
+import 'package:lara_flutter_pro/screens/user_list_screen.dart';
 import 'package:provider/provider.dart';
 import '../auth/auth_service.dart';
 
 import '../l10n/app_localizations.dart';
+import 'completed_order_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -24,8 +26,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
   int _categoryCount = 0;
   int _attributeCount = 0;
   int _logoCount = 0;
+  int _userCount = 0;
   int _productCount = 0;
   int _pendingOrderCount = 0;
+  int _completedOrderCount = 0;
+  double _totalEarning = 0.0;
   bool _isLoading = true;
 
   @override
@@ -38,14 +43,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (mounted) setState(() => _isLoading = true);
     final authService = context.read<AuthService>();
     try {
-      // Fetch all data points at the same time for efficiency
       final results = await Future.wait([
         authService.getCurrentUser(),
         authService.getCategories(),
         authService.getAttributes(),
         authService.getLogos(),
         authService.getProducts(),
-        authService.getListOrder(), // <-- Fetch order data
+        authService.getListOrder(),
+        authService.getCompletedOrders(),
+        authService.getAllUsers(),
+        authService.getTotalEarning(),
       ]);
 
       if (mounted) {
@@ -56,7 +63,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
           _logoCount = (results[3] as List).length;
           _productCount = (results[4] as List).length;
           final orderData = results[5] as Map<String, dynamic>?;
-          _pendingOrderCount = orderData?['pending_count'] ?? 0; // <-- Store pending order count
+          _pendingOrderCount = orderData?['pending_count'] ?? 0;
+          final completedOrderData = results[6] as Map<String, dynamic>?;
+          _completedOrderCount = completedOrderData?['complete_order_count'] ?? 0;
+          final userData = results[7] as Map<String, dynamic>?;
+          _userCount = userData?['countUser'] ?? 0;
+          _totalEarning = results[8] as double;
           _isLoading = false;
         });
       }
@@ -174,20 +186,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 subtitle: Text(
                   _adminUser?['email'] ?? localizations.administratorAccess,
                 ),
+                trailing: Text(
+                  '\$${_totalEarning.toStringAsFixed(2)}',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    color: Colors.green,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
               const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () {},
-                style: _buttonStyle(context),
-                child: Text(localizations.deliveryPrices),
-              ),
-              const SizedBox(height: 8),
-              ElevatedButton(
-                onPressed: () {},
-                style: _buttonStyle(context),
-                child: Text(localizations.sendNotification),
-              ),
-              const SizedBox(height: 24),
               GridView.count(
                 crossAxisCount: 2,
                 shrinkWrap: true,
@@ -195,7 +202,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 crossAxisSpacing: 16,
                 mainAxisSpacing: 16,
                 children: [
-                  _buildStatCard('0', localizations.users),
+                  InkWell(
+                    onTap: () {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const UserListScreen()))
+                          .then((_) => _fetchDashboardData());
+                    },
+                    borderRadius: BorderRadius.circular(12),
+                    child: _buildStatCard(_userCount.toString(), localizations.users),
+                  ),
                   InkWell(
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CategoryScreen())).then((_) => _fetchDashboardData()),
                     child: _buildStatCard(_categoryCount.toString(), localizations.categories),
@@ -212,8 +226,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProductListScreen())).then((_) => _fetchDashboardData()),
                     child: _buildStatCard(_productCount.toString(), localizations.products),
                   ),
-                  _buildStatCard('\$0.00', localizations.earnings),
-                  // THE NEW MANAGE ORDERS CARD
                   InkWell(
                     onTap: () {
                       Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminOrderScreen()))
@@ -225,7 +237,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       localizations.pendingOrders,
                     ),
                   ),
-                  _buildStatCard('0', localizations.ordersInProgress),
+                  InkWell(
+                    onTap: () {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const CompletedOrderScreen()))
+                          .then((_) => _fetchDashboardData());
+                    },
+                    borderRadius: BorderRadius.circular(12),
+                    child: _buildStatCard(
+                      _completedOrderCount.toString(),
+                      'Completed Orders',
+                    ),
+                  ),
                 ],
               ),
             ],

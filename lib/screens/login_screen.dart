@@ -18,8 +18,27 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   bool _isPasswordVisible = false;
   bool _isLoggingIn = false;
-  bool _isFacebookLoggingIn = false;
+  bool _isFacebookLoggingIn = false; // New state for the Facebook button
 
+  String? _logoUrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchLogo();
+  }
+
+  Future<void> _fetchLogo() async {
+    final authService = context.read<AuthService>();
+    final logos = await authService.getActiveLogos();
+    if (mounted && logos.isNotEmpty) {
+      setState(() {
+        _logoUrl = logos[0]['thumbnail_url'];
+      });
+    }
+  }
+
+  // Your existing login method is unchanged
   void _login() async {
     if (_isLoggingIn || _isFacebookLoggingIn) return;
     setState(() => _isLoggingIn = true);
@@ -35,7 +54,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (userData != null) {
       _handleLoginSuccess(userData);
     } else {
-      if (mounted) {
+      if(mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Login Failed. Please check your credentials.')),
         );
@@ -43,32 +62,28 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  void _loginWithFacebook() async {
-    if (_isFacebookLoggingIn || _isLoggingIn) return;
-    setState(() => _isFacebookLoggingIn = true);
+  // void _loginWithFacebook() async {
+  //   if (_isFacebookLoggingIn || _isLoggingIn) return;
+  //   setState(() => _isFacebookLoggingIn = true);
+  //
+  //   final authService = context.read<AuthService>();
+  //   final userData = await authService.loginWithFacebook();
+  //
+  //   if (mounted) setState(() => _isFacebookLoggingIn = false);
+  //
+  //   if (userData != null) {
+  //     _handleLoginSuccess(userData);
+  //   } else {
+  //     if(mounted) {
+  //       ScaffoldMessenger.of(context).showSnackBar(
+  //         const SnackBar(content: Text('Facebook Login Failed. Please try again.')),
+  //       );
+  //     }
+  //   }
+  // }
 
-    final authService = context.read<AuthService>();
-
-    // THE FIX: The function returns user data (a Map), not a boolean.
-    final Map<String, dynamic>? userData = await authService.loginWithFacebook();
-
-    if (mounted) setState(() => _isFacebookLoggingIn = false);
-
-    // THE FIX: Check if the userData is not null.
-    if (userData != null) {
-      _handleLoginSuccess(userData);
-    } else {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Facebook Login Failed. Please try again.')),
-        );
-      }
-    }
-  }
-
-  // This shared method handles navigation after any successful login
   void _handleLoginSuccess(Map<String, dynamic> userData) {
-    final bool isAdmin = userData['is_admin'] == 1;
+    final bool isAdmin = userData['is_admin'] == true;
     if (isAdmin) {
       if (mounted) Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (context) => const DashboardScreen()), (route) => false);
     } else {
@@ -80,85 +95,100 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        automaticallyImplyLeading: widget.isPoppingOnSuccess,
+        appBar: AppBar(
+          automaticallyImplyLeading: widget.isPoppingOnSuccess,
+          backgroundColor: Colors.white,
+          elevation: 0,
+          iconTheme: const IconThemeData(color: Colors.black),
+        ),
         backgroundColor: Colors.white,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.black),
-      ),
-      backgroundColor: Colors.white,
-      body: SafeArea(
+        body: SafeArea(
         child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(24.0, 0, 24.0, 32.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Image.asset('assets/images/login.jpg', height: 200),
-                const SizedBox(height: 32),
-                const Text('Login', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                const Text('Please Sign in to continue.', style: TextStyle(fontSize: 16, color: Colors.grey)),
-                const SizedBox(height: 32),
-                TextField(
-                  controller: _nameController,
-                  decoration: _buildInputDecoration('Name', Icons.person_outline),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: _passwordController,
-                  obscureText: !_isPasswordVisible,
-                  decoration: _buildInputDecoration('Password', Icons.lock_outline).copyWith(
-                    suffixIcon: IconButton(
-                      icon: Icon(_isPasswordVisible ? Icons.visibility_off_outlined : Icons.visibility_outlined),
-                      onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                ElevatedButton(
-                  onPressed: _isLoggingIn || _isFacebookLoggingIn ? null : _login,
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    backgroundColor: const Color(0xFF1E232C),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  child: _isLoggingIn
-                      ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                      : const Text('Sign in', style: TextStyle(fontSize: 18, color: Colors.white)),
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton.icon(
-                  icon: const Icon(Icons.facebook, color: Colors.white),
-                  label: _isFacebookLoggingIn
-                      ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                      : const Text('Login with Facebook', style: TextStyle(fontSize: 18, color: Colors.white)),
-                  onPressed: _isLoggingIn || _isFacebookLoggingIn ? null : _loginWithFacebook,
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    backgroundColor: const Color(0xFF1877F2), // Facebook Blue
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Text("Don't have an account?", style: TextStyle(color: Colors.grey)),
-                    TextButton(
-                      onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const RegisterScreen())),
-                      child: const Text('Sign Up', style: TextStyle(color: Color(0xFF1E232C), fontWeight: FontWeight.bold)),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
+        child: Padding(
+        padding: const EdgeInsets.fromLTRB(24.0, 0, 24.0, 32.0),
+    child: Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      SizedBox(
+        height: 200,
+        child: _logoUrl == null
+            ? const Center(child: CircularProgressIndicator())
+            : Image.network(
+          _logoUrl!,
+          fit: BoxFit.contain,
+          errorBuilder: (c, e, s) => Image.asset('assets/images/login.jpg'),
         ),
       ),
+    const SizedBox(height: 32),
+    const Text('Login', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
+    const SizedBox(height: 8),
+    const Text('Please Sign in to continue.', style: TextStyle(fontSize: 16, color: Colors.grey)),
+    const SizedBox(height: 32),
+    TextField(
+    controller: _nameController,
+    decoration: _buildInputDecoration('Name', Icons.person_outline),
+    ),
+    const SizedBox(height: 16),
+    TextField(
+    controller: _passwordController,
+    obscureText: !_isPasswordVisible,
+    decoration: _buildInputDecoration('Password', Icons.lock_outline).copyWith(
+    suffixIcon: IconButton(
+    icon: Icon(_isPasswordVisible ? Icons.visibility_off_outlined : Icons.visibility_outlined),
+    onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible),
+    ),
+    ),
+    ),
+    const SizedBox(height: 24),
+    ElevatedButton(
+    onPressed: _isLoggingIn || _isFacebookLoggingIn ? null : _login,
+    style: ElevatedButton.styleFrom(
+    padding: const EdgeInsets.symmetric(vertical: 16),
+    backgroundColor: const Color(0xFF1E232C),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    ),
+    child: _isLoggingIn
+    ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+        : const Text('Sign in', style: TextStyle(fontSize: 18, color: Colors.white)),
+    ),
+
+    // === ADD THE FACEBOOK BUTTON HERE ===
+    const SizedBox(height: 16),
+    // ElevatedButton.icon(
+    // icon: const Icon(Icons.facebook, color: Colors.white),
+    // label: _isFacebookLoggingIn
+    // ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+    //     : const Text('Login with Facebook', style: TextStyle(fontSize: 18, color: Colors.white)),
+    // onPressed: _isLoggingIn || _isFacebookLoggingIn ? null : _loginWithFacebook,
+    // style: ElevatedButton.styleFrom(
+    // padding: const EdgeInsets.symmetric(vertical: 16),
+    // backgroundColor: const Color(0xFF1877F2), // Facebook Blue
+    // shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    // ),
+    // ),
+    // =====================================
+
+
+      const SizedBox(height: 24),
+      Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Text("Don't have an account?", style: TextStyle(color: Colors.grey)),
+          TextButton(
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const RegisterScreen())),
+            child: const Text('Sign Up', style: TextStyle(color: Color(0xFF1E232C), fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    ],
+    ),
+        ),
+        ),
+        ),
     );
   }
 

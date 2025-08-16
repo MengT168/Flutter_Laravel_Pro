@@ -243,7 +243,7 @@ class _CartScreenState extends State<CartScreen> {
 
   Widget _buildSummaryCard(double total) {
     final loc = AppLocalizations.of(context)!;
-    const double shipping = 5.00;
+    const double shipping =0;
     return Card(
       margin: const EdgeInsets.all(0),
       shape: const RoundedRectangleBorder(

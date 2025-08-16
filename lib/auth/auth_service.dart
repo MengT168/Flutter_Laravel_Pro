@@ -2,22 +2,27 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:ui' as web;
 import 'package:flutter/foundation.dart';
-import 'package:flutter_web_auth_2/flutter_web_auth_2.dart';
 import 'package:http/http.dart' as http;
+import 'package:flutter_web_auth_2/flutter_web_auth_2.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:image_picker/image_picker.dart';
 
 class AuthService with ChangeNotifier {
 
   AuthService._privateConstructor();
+
   static final AuthService _instance = AuthService._privateConstructor();
+
   factory AuthService() {
     return _instance;
   }
 
   List<dynamic> _favorites = [];
+
   List<dynamic> get favorites => _favorites;
-  List<int> get favoriteProductIds => _favorites.map((p) => p['id'] as int).toList();
+
+  List<int> get favoriteProductIds =>
+      _favorites.map((p) => p['id'] as int).toList();
 
   Future<void> _fetchUserAndDependencies() async {
     await Future.wait([
@@ -26,11 +31,12 @@ class AuthService with ChangeNotifier {
   }
 
   Map<String, dynamic>? _cartData;
+
   Map<String, dynamic>? get cartData => _cartData;
 
 
   final String _baseUrl = kIsWeb
-      ? 'https://e5e9d3b674c9.ngrok-free.app/api'
+      ? 'http://127.0.0.1:8000/api'
       : 'http://10.0.2.2:8000/api';
   final String serverUrl = kIsWeb
       ? 'http://127.0.0.1:8000'
@@ -92,10 +98,10 @@ class AuthService with ChangeNotifier {
   // }
 
   Map<String, dynamic>? _currentUser;
+
   Map<String, dynamic>? get user => _currentUser;
 
   get cart => null;
-
 
 
   // Future<Map<String, dynamic>?> login(String name, String password) async {
@@ -153,7 +159,7 @@ class AuthService with ChangeNotifier {
         headers: {
           'Content-Type': 'application/json; charset=UTF-8',
           'Accept': 'application/json',
-          'ngrok-skip-browser-warning': 'true',
+          // 'ngrok-skip-browser-warning': 'true',
         },
         body: jsonEncode({'name': name, 'password': password}),
       );
@@ -195,7 +201,11 @@ class AuthService with ChangeNotifier {
     try {
       final response = await http.get(
         Uri.parse('$_baseUrl/user'),
-        headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token','ngrok-skip-browser-warning': 'true'},
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $token',
+          // 'ngrok-skip-browser-warning': 'true'
+        },
       );
       if (response.statusCode == 200) {
         _currentUser = jsonDecode(response.body);
@@ -208,7 +218,6 @@ class AuthService with ChangeNotifier {
       return null;
     }
   }
-
 
 
   Future<void> _storeToken(String token) async {
@@ -242,7 +251,7 @@ class AuthService with ChangeNotifier {
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
           'Authorization': 'Bearer $token',
-          'ngrok-skip-browser-warning': 'true'
+          // 'ngrok-skip-browser-warning': 'true'
         },
       );
 
@@ -273,7 +282,7 @@ class AuthService with ChangeNotifier {
         headers: {
           'Accept': 'application/json',
           'Authorization': 'Bearer $token',
-          'ngrok-skip-browser-warning': 'true'
+          // 'ngrok-skip-browser-warning': 'true'
         },
       );
 
@@ -297,7 +306,11 @@ class AuthService with ChangeNotifier {
 
     final response = await http.get(
       Uri.parse('$_baseUrl/admin/list-category'),
-      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token','ngrok-skip-browser-warning': 'true'},
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+        // 'ngrok-skip-browser-warning': 'true'
+      },
     );
 
     if (response.statusCode == 200) {
@@ -317,7 +330,7 @@ class AuthService with ChangeNotifier {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
-        'ngrok-skip-browser-warning': 'true'
+        // 'ngrok-skip-browser-warning': 'true'
       },
       body: jsonEncode({'name': name}),
     );
@@ -335,7 +348,7 @@ class AuthService with ChangeNotifier {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
-        'ngrok-skip-browser-warning': 'true'
+        // 'ngrok-skip-browser-warning': 'true'
       },
       body: jsonEncode({'name': name}),
     );
@@ -348,7 +361,11 @@ class AuthService with ChangeNotifier {
 
     final response = await http.delete(
       Uri.parse('$_baseUrl/admin/category/delete/$id'),
-      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token','ngrok-skip-browser-warning': 'true'},
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+        // 'ngrok-skip-browser-warning': 'true'
+      },
     );
     return response.statusCode == 200;
   }
@@ -359,7 +376,11 @@ class AuthService with ChangeNotifier {
 
     final response = await http.get(
       Uri.parse('$_baseUrl/admin/list-attribute'),
-      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token','ngrok-skip-browser-warning': 'true'},
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+        'ngrok-skip-browser-warning': 'true'
+      },
     );
 
     if (response.statusCode == 200) {
@@ -375,7 +396,12 @@ class AuthService with ChangeNotifier {
 
     final response = await http.post(
       Uri.parse('$_baseUrl/admin/add-attribute-submit'),
-      headers: {'Accept': 'application/json', 'Content-Type': 'application/json', 'Authorization': 'Bearer $token','ngrok-skip-browser-warning': 'true'},
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+        // 'ngrok-skip-browser-warning': 'true'
+      },
       body: jsonEncode({'type': type, 'value': value}),
     );
     return response.statusCode == 200;
@@ -387,7 +413,12 @@ class AuthService with ChangeNotifier {
 
     final response = await http.put(
       Uri.parse('$_baseUrl/admin/attribute/update/$id'),
-      headers: {'Accept': 'application/json', 'Content-Type': 'application/json', 'Authorization': 'Bearer $token','ngrok-skip-browser-warning': 'true'},
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+        // 'ngrok-skip-browser-warning': 'true'
+      },
       body: jsonEncode({'type': type, 'value': value}),
     );
     print('UPDATE ATTRIBUTE STATUS CODE: ${response.statusCode}');
@@ -402,7 +433,11 @@ class AuthService with ChangeNotifier {
 
     final response = await http.delete(
       Uri.parse('$_baseUrl/admin/attribute/delete/$id'),
-      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token','ngrok-skip-browser-warning': 'true'},
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+        // 'ngrok-skip-browser-warning': 'true'
+      },
     );
     return response.statusCode == 200;
   }
@@ -412,7 +447,11 @@ class AuthService with ChangeNotifier {
     if (token == null) return [];
     final response = await http.get(
       Uri.parse('$_baseUrl/admin/list-logo'),
-      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token','ngrok-skip-browser-warning': 'true'},
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+        // 'ngrok-skip-browser-warning': 'true'
+      },
     );
     if (response.statusCode == 200) {
       print(response.body);
@@ -424,14 +463,18 @@ class AuthService with ChangeNotifier {
   Future<bool> addLogo(XFile imageFile) async {
     final token = await getToken();
     if (token == null) return false;
-    var request = http.MultipartRequest('POST', Uri.parse('$_baseUrl/admin/add-logo'));
+    var request = http.MultipartRequest(
+        'POST', Uri.parse('$_baseUrl/admin/add-logo'));
     request.headers['Authorization'] = 'Bearer $token';
     request.headers['Accept'] = 'application/json';
 
     if (kIsWeb) {
-      request.files.add(http.MultipartFile.fromBytes('thumbnail', await imageFile.readAsBytes(), filename: imageFile.name));
+      request.files.add(http.MultipartFile.fromBytes(
+          'thumbnail', await imageFile.readAsBytes(),
+          filename: imageFile.name));
     } else {
-      request.files.add(await http.MultipartFile.fromPath('thumbnail', imageFile.path));
+      request.files.add(
+          await http.MultipartFile.fromPath('thumbnail', imageFile.path));
     }
 
     var response = await request.send();
@@ -441,14 +484,18 @@ class AuthService with ChangeNotifier {
   Future<bool> updateLogo(int id, XFile imageFile) async {
     final token = await getToken();
     if (token == null) return false;
-    var request = http.MultipartRequest('POST', Uri.parse('$_baseUrl/admin/logo/update/$id'));
+    var request = http.MultipartRequest(
+        'POST', Uri.parse('$_baseUrl/admin/logo/update/$id'));
     request.headers['Authorization'] = 'Bearer $token';
     request.headers['Accept'] = 'application/json';
 
     if (kIsWeb) {
-      request.files.add(http.MultipartFile.fromBytes('thumbnail', await imageFile.readAsBytes(), filename: imageFile.name));
+      request.files.add(http.MultipartFile.fromBytes(
+          'thumbnail', await imageFile.readAsBytes(),
+          filename: imageFile.name));
     } else {
-      request.files.add(await http.MultipartFile.fromPath('thumbnail', imageFile.path));
+      request.files.add(
+          await http.MultipartFile.fromPath('thumbnail', imageFile.path));
     }
 
     var response = await request.send();
@@ -460,7 +507,11 @@ class AuthService with ChangeNotifier {
     if (token == null) return false;
     final response = await http.patch(
       Uri.parse('$_baseUrl/admin/logo/toggle-status/$id'),
-      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token','ngrok-skip-browser-warning': 'true'},
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+        // 'ngrok-skip-browser-warning': 'true'
+      },
     );
     return response.statusCode == 200;
   }
@@ -470,10 +521,15 @@ class AuthService with ChangeNotifier {
     if (token == null) return false;
     final response = await http.delete(
       Uri.parse('$_baseUrl/admin/logo/delete/$id'),
-      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token','ngrok-skip-browser-warning': 'true'},
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+        // 'ngrok-skip-browser-warning': 'true'
+      },
     );
     return response.statusCode == 200;
   }
+
   // Future<List<dynamic>> getProducts() async {
   //   final token = await getToken();
   //   if (token == null) return [];
@@ -497,7 +553,7 @@ class AuthService with ChangeNotifier {
         headers: {
           'Accept': 'application/json',
           'Authorization': 'Bearer $token',
-          'ngrok-skip-browser-warning': 'true'
+          // 'ngrok-skip-browser-warning': 'true'
         },
       );
 
@@ -520,19 +576,25 @@ class AuthService with ChangeNotifier {
     if (token == null) return false;
     final response = await http.delete(
       Uri.parse('$_baseUrl/admin/product/delete/$id'),
-      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token','ngrok-skip-browser-warning': 'true'},
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+        // 'ngrok-skip-browser-warning': 'true'
+      },
     );
     return response.statusCode == 200;
   }
 
-  Future<bool> addProduct(Map<String, String> fields, List<int> sizeIds, List<int> colorIds, XFile? image) async {
+  Future<bool> addProduct(Map<String, String> fields, List<int> sizeIds,
+      List<int> colorIds, XFile? image) async {
     final token = await getToken();
     if (token == null) return false;
 
-    var request = http.MultipartRequest('POST', Uri.parse('$_baseUrl/admin/add-product-submit'));
+    var request = http.MultipartRequest(
+        'POST', Uri.parse('$_baseUrl/admin/add-product-submit'));
     request.headers['Authorization'] = 'Bearer $token';
     request.headers['Accept'] = 'application/json';
-    request.headers['ngrok-skip-browser-warning'] = 'true';
+    // request.headers['ngrok-skip-browser-warning'] = 'true';
 
     request.fields.addAll(fields);
 
@@ -541,9 +603,11 @@ class AuthService with ChangeNotifier {
 
     if (image != null) {
       if (kIsWeb) {
-        request.files.add(http.MultipartFile.fromBytes('thumbnail', await image.readAsBytes(), filename: image.name));
+        request.files.add(http.MultipartFile.fromBytes(
+            'thumbnail', await image.readAsBytes(), filename: image.name));
       } else {
-        request.files.add(await http.MultipartFile.fromPath('thumbnail', image.path));
+        request.files.add(
+            await http.MultipartFile.fromPath('thumbnail', image.path));
       }
     }
 
@@ -551,14 +615,16 @@ class AuthService with ChangeNotifier {
     return response.statusCode == 200;
   }
 
-  Future<bool> updateProduct(int id, Map<String, String> fields, List<int> sizeIds, List<int> colorIds, XFile? image) async {
+  Future<bool> updateProduct(int id, Map<String, String> fields,
+      List<int> sizeIds, List<int> colorIds, XFile? image) async {
     final token = await getToken();
     if (token == null) return false;
 
-    var request = http.MultipartRequest('PATCH', Uri.parse('$_baseUrl/admin/product/update/$id'));
+    var request = http.MultipartRequest(
+        'PATCH', Uri.parse('$_baseUrl/admin/product/update/$id'));
     request.headers['Authorization'] = 'Bearer $token';
     request.headers['Accept'] = 'application/json';
-    request.headers['ngrok-skip-browser-warning'] = 'true';
+    // request.headers['ngrok-skip-browser-warning'] = 'true';
 
     request.fields.addAll(fields);
 
@@ -567,9 +633,11 @@ class AuthService with ChangeNotifier {
 
     if (image != null) {
       if (kIsWeb) {
-        request.files.add(http.MultipartFile.fromBytes('thumbnail', await image.readAsBytes(), filename: image.name));
+        request.files.add(http.MultipartFile.fromBytes(
+            'thumbnail', await image.readAsBytes(), filename: image.name));
       } else {
-        request.files.add(await http.MultipartFile.fromPath('thumbnail', image.path));
+        request.files.add(
+            await http.MultipartFile.fromPath('thumbnail', image.path));
       }
     }
 
@@ -577,10 +645,81 @@ class AuthService with ChangeNotifier {
     return response.statusCode == 200;
   }
 
+  Future<Map<String, dynamic>?> getCompletedOrders() async {
+    final token = await getToken();
+    if (token == null) return null;
+
+    final response = await http.get(
+      Uri.parse('$_baseUrl/admin/list-all-complete-order'),
+      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+    return null;
+  }
+
+  Future<Map<String, dynamic>?> getAllUsers() async {
+    final token = await getToken();
+    if (token == null) return null;
+
+    final response = await http.get(
+      Uri.parse('$_baseUrl/admin/all-users'),
+      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+    return null;
+  }
+
+  Future<List<dynamic>> getActiveLogos() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/get-logo'),
+        headers: {
+          'Accept': 'application/json',
+          // Add ngrok header if testing on web
+          'ngrok-skip-browser-warning': 'true',
+        },
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body)['data'] as List<dynamic>;
+      }
+      return [];
+    } catch (e) {
+      print('Error fetching logos: $e');
+      return [];
+    }
+  }
+
+  Future<double> getTotalEarning() async {
+    final token = await getToken();
+    if (token == null) return 0.0;
+
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/admin/total-earning'),
+        headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body)['data'];
+        return (data as num).toDouble();
+      }
+      return 0.0;
+    } catch (e) {
+      print('Error fetching total earning: $e');
+      return 0.0;
+    }
+  }
 
   Future<Map<String, dynamic>?> getHomeData() async {
     try {
-      final response = await http.get(Uri.parse('$_baseUrl/home'),headers: {'ngrok-skip-browser-warning': 'true',});
+      final response = await http.get(Uri.parse('$_baseUrl/home'),
+          );
       if (response.statusCode == 200) {
         return jsonDecode(response.body)['data'];
       }
@@ -593,9 +732,10 @@ class AuthService with ChangeNotifier {
 
   Future<Map<String, dynamic>?> getProductDetail(String slug) async {
     try {
-      final response = await http.get(Uri.parse('$_baseUrl/products/detail/$slug'),headers: {'ngrok-skip-browser-warning': 'true'});
+      final response = await http.get(
+          Uri.parse('$_baseUrl/products/detail/$slug'),
+          );
       if (response.statusCode == 200) {
-
         return jsonDecode(response.body);
       }
       return null;
@@ -612,8 +752,14 @@ class AuthService with ChangeNotifier {
 
     final response = await http.post(
       Uri.parse('$_baseUrl/cart/add'),
-      headers: {'Accept': 'application/json', 'Content-Type': 'application/json', 'Authorization': 'Bearer $token','ngrok-skip-browser-warning': 'true'},
-      body: jsonEncode({'userId': user!['id'], 'proId': productId, 'qty': quantity}),
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+        // 'ngrok-skip-browser-warning': 'true'
+      },
+      body: jsonEncode(
+          {'userId': user!['id'], 'proId': productId, 'qty': quantity}),
     );
 
     if (response.statusCode == 200) {
@@ -633,7 +779,11 @@ class AuthService with ChangeNotifier {
 
     final response = await http.get(
       Uri.parse('$_baseUrl/cart/items?userId=${user!['id']}'),
-      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token','ngrok-skip-browser-warning': 'true'},
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+        // 'ngrok-skip-browser-warning': 'true'
+      },
     );
 
     if (response.statusCode == 200) {
@@ -688,14 +838,20 @@ class AuthService with ChangeNotifier {
   //
   //   return false;
   // }
-  Future<bool> placeOrder({required String phone, required String address}) async {
+  Future<bool> placeOrder(
+      {required String phone, required String address}) async {
     if (user == null) return false;
     final token = await getToken();
     if (token == null) return false;
 
     final response = await http.post(
       Uri.parse('$_baseUrl/place-order'),
-      headers: {'Accept': 'application/json', 'Content-Type': 'application/json', 'Authorization': 'Bearer $token','ngrok-skip-browser-warning': 'true'},
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+        // 'ngrok-skip-browser-warning': 'true'
+      },
       body: jsonEncode({
         'userId': user!['id'],
         'phone': phone,
@@ -723,7 +879,7 @@ class AuthService with ChangeNotifier {
       headers: {
         'Accept': 'application/json',
         'Authorization': 'Bearer $token',
-        'ngrok-skip-browser-warning': 'true'
+        // 'ngrok-skip-browser-warning': 'true'
       },
     );
 
@@ -739,7 +895,11 @@ class AuthService with ChangeNotifier {
 
     final response = await http.get(
       Uri.parse('$_baseUrl/my-orders'),
-      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token','ngrok-skip-browser-warning': 'true'},
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+        // 'ngrok-skip-browser-warning': 'true'
+      },
     );
 
     if (response.statusCode == 200) {
@@ -754,7 +914,11 @@ class AuthService with ChangeNotifier {
 
     final response = await http.post(
       Uri.parse('$_baseUrl/cancel-order/$orderId'),
-      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token','ngrok-skip-browser-warning': 'true'},
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+        // 'ngrok-skip-browser-warning': 'true'
+      },
     );
     return response.statusCode == 200;
   }
@@ -765,7 +929,11 @@ class AuthService with ChangeNotifier {
 
     final response = await http.post(
       Uri.parse('$_baseUrl/cart-item/increase/$cartItemId'),
-      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token','ngrok-skip-browser-warning': 'true'},
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+        // 'ngrok-skip-browser-warning': 'true'
+      },
     );
 
     if (response.statusCode == 200) {
@@ -781,7 +949,11 @@ class AuthService with ChangeNotifier {
 
     final response = await http.post(
       Uri.parse('$_baseUrl/cart-item/decrease/$cartItemId'),
-      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token','ngrok-skip-browser-warning': 'true'},
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+        // 'ngrok-skip-browser-warning': 'true'
+      },
     );
 
     if (response.statusCode == 200) {
@@ -790,11 +962,15 @@ class AuthService with ChangeNotifier {
     }
     return false;
   }
+
   Future<List<dynamic>> searchProducts(String query) async {
     try {
       final response = await http.get(
         Uri.parse('$_baseUrl/products/search?q=$query'),
-        headers: {'Accept': 'application/json','ngrok-skip-browser-warning': 'true',},
+        headers: {
+          'Accept': 'application/json',
+          // 'ngrok-skip-browser-warning': 'true',
+        },
       );
       if (response.statusCode == 200) {
         return jsonDecode(response.body)['data'] as List<dynamic>;
@@ -807,7 +983,6 @@ class AuthService with ChangeNotifier {
   }
 
 
-
   Future<void> getFavorites() async {
     if (user == null) {
       _favorites = [];
@@ -818,7 +993,11 @@ class AuthService with ChangeNotifier {
 
     final response = await http.get(
       Uri.parse('$_baseUrl/favorites'),
-      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token','ngrok-skip-browser-warning': 'true'},
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+        // 'ngrok-skip-browser-warning': 'true'
+      },
     );
     if (response.statusCode == 200) {
       _favorites = jsonDecode(response.body)['data'] as List;
@@ -833,14 +1012,18 @@ class AuthService with ChangeNotifier {
 
     final response = await http.post(
       Uri.parse('$_baseUrl/favorites/toggle'),
-      headers: {'Accept': 'application/json', 'Content-Type': 'application/json', 'Authorization': 'Bearer $token','ngrok-skip-browser-warning': 'true'},
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+        // 'ngrok-skip-browser-warning': 'true'
+      },
       body: jsonEncode({'product_id': productId}),
     );
 
     print('TOGGLE FAVORITE STATUS CODE: ${response.statusCode}');
     print('TOGGLE FAVORITE RESPONSE BODY: ${response.body}');
 
-    // Re-fetch the official list from the server to ensure consistency
     await getFavorites();
   }
 
@@ -850,7 +1033,11 @@ class AuthService with ChangeNotifier {
 
     final response = await http.get(
       Uri.parse('$_baseUrl/admin/list-order'),
-      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token','ngrok-skip-browser-warning': 'true'},
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+        // 'ngrok-skip-browser-warning': 'true'
+      },
 
     );
 
@@ -866,7 +1053,11 @@ class AuthService with ChangeNotifier {
 
     final response = await http.get( // Your route uses GET
       Uri.parse('$_baseUrl/admin/access-order/$orderId'),
-      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token','ngrok-skip-browser-warning': 'true'},
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+        // 'ngrok-skip-browser-warning': 'true'
+      },
     );
     return response.statusCode == 200;
   }
@@ -877,51 +1068,57 @@ class AuthService with ChangeNotifier {
 
     final response = await http.post( // Your route uses POST
       Uri.parse('$_baseUrl/admin/reject-order/$orderId'),
-      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token','ngrok-skip-browser-warning': 'true'},
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+        // 'ngrok-skip-browser-warning': 'true'
+      },
     );
     return response.statusCode == 200;
   }
 
-  Future<Map<String, dynamic>?> loginWithFacebook() async {
-    try {
-      final baseUrl = "https://your-laravel-domain.com";
-      final authUrl = "$baseUrl/auth/facebook/redirect";
-
-      if (kIsWeb) {
-        // Web flow — open popup and listen for message
-        final popup = web.open(authUrl, 'Facebook Login', 'width=600,height=700');
-
-        final completer = Completer<Map<String, dynamic>?>();
-        web.onMessage.listen((event) {
-          try {
-            final params = Uri.splitQueryString(event.data.toString());
-            final returnedToken = params['token'];
-            final userParam = params['user'];
-
-            if (returnedToken != null && userParam != null) {
-              final userJson = Uri.decodeComponent(userParam);
-              final returnedUser = jsonDecode(userJson) as Map<String, dynamic>;
-
-              _currentUser = returnedUser;
-              // store token if needed
-              completer.complete(_currentUser);
-              popup?.close();
-            }
-          } catch (e) {
-            completer.completeError(e);
-          }
-        });
-
-        return completer.future;
-      } else {
-        // Mobile/Desktop flow — use package like flutter_facebook_auth
-        print("Facebook login not implemented for mobile in this method.");
-        return null;
-      }
-    } catch (e) {
-      print("Facebook login error: $e");
-      return null;
-    }
-  }
-
-
+//   Future<Map<String, dynamic>?> loginWithFacebook() async {
+//     try {
+//       // 1. Get the origin of your Flutter app (e.g., http://localhost:12345)
+//       final String clientOrigin = Uri.base.origin;
+//
+//       // 2. Add the origin as a query parameter to the redirect URL
+//       final url = Uri.parse('$_baseUrl/auth/facebook/redirect?origin=$clientOrigin');
+//
+//       final result = await FlutterWebAuth2.authenticate(
+//         url: url.toString(),
+//         callbackUrlScheme: "web-auth-callback",
+//       );
+//
+//       final fragment = Uri.parse(result).fragment;
+//       final params = Uri.splitQueryString(fragment);
+//       final returnedToken = params['token'];
+//       final userParam = params['user'];
+//       print(userParam);
+//
+//       if (returnedToken != null && userParam != null) {
+//         final userJson = Uri.decodeComponent(userParam);
+//         final decodedUser = jsonDecode(userJson);
+//
+//
+//         // THE FIX: Safely parse the user data and include the ID
+//         final returnedUser = {
+//           'id': decodedUser['id'], // <-- Add the user's ID
+//           'name': decodedUser['name'] as String?,
+//           'email': decodedUser['email'] as String?,
+//           'is_admin': (decodedUser['is_admin'] == 1 || decodedUser['is_admin'] == true) ? 1 : 0,
+//         };
+// print(returnedUser);
+//         await _storeToken(returnedToken);
+//         _currentUser = returnedUser;
+//         await _fetchUserAndDependencies();
+//         notifyListeners();
+//         return _currentUser;
+//       }
+//       return null;
+//     } catch (e) {
+//       print('Facebook login error: $e');
+//       return null;
+//     }
+//   }
+}

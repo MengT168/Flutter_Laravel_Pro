@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart';
 import '../auth/auth_service.dart';
+import 'package:provider/provider.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -15,6 +17,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _authService = AuthService();
 
   bool _isPasswordVisible = false;
+
+  String? _logoUrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchLogo();
+  }
+
+  Future<void> _fetchLogo() async {
+    final authService = context.read<AuthService>();
+    final logos = await authService.getActiveLogos();
+    if (mounted && logos.isNotEmpty) {
+      setState(() {
+        _logoUrl = logos[0]['thumbnail_url'];
+      });
+    }
+  }
+
 
   /// Handles the registration logic
   void _register() async {
@@ -65,9 +86,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Image.asset(
-                  'assets/images/register.jpg',
+                SizedBox(
                   height: 200,
+                  child: _logoUrl == null
+                      ? const Center(child: CircularProgressIndicator())
+                      : Image.network(
+                    _logoUrl!,
+                    fit: BoxFit.contain,
+                    errorBuilder: (c, e, s) => Image.asset('assets/images/login.jpg'),
+                  ),
                 ),
                 const SizedBox(height: 32),
 
