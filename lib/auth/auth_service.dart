@@ -644,6 +644,8 @@ class AuthService with ChangeNotifier {
     return response.statusCode == 200;
   }
 
+
+
   Future<Map<String, dynamic>?> getCompletedOrders() async {
     final token = await getToken();
     if (token == null) return null;
@@ -1074,6 +1076,29 @@ class AuthService with ChangeNotifier {
       },
     );
     return response.statusCode == 200;
+  }
+
+  Future<List<dynamic>> getOrderHistory() async {
+    final token = await getToken();
+    if (token == null) return [];
+
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/get-order-history'),
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $token'
+        },
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body)['data'] as List<dynamic>;
+      }
+      return [];
+    } catch (e) {
+      print('Error fetching order history: $e');
+      return [];
+    }
   }
 
 //   Future<Map<String, dynamic>?> loginWithFacebook() async {

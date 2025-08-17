@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../auth/auth_service.dart';
 import '../l10n/app_localizations.dart';
 import 'login_screen.dart';
+import 'order_history_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -72,8 +73,22 @@ class _HomeScreenState extends State<HomeScreen> {
               }
             },
           ),
+          IconButton(
+            icon: const Icon(Icons.history),
+            tooltip: 'Order History',
+            onPressed: () {
+              if (authService.user == null) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please login to view order history.')));
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const LoginScreen(isPoppingOnSuccess: true)));
+              } else {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const OrderHistoryScreen()));
+              }
+            },
+          ),
         ],
       ),
+
+
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
