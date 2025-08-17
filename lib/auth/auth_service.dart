@@ -621,10 +621,9 @@ class AuthService with ChangeNotifier {
     if (token == null) return false;
 
     var request = http.MultipartRequest(
-        'PATCH', Uri.parse('$_baseUrl/admin/product/update/$id'));
+        'POST', Uri.parse('$_baseUrl/admin/product/update/$id'));
     request.headers['Authorization'] = 'Bearer $token';
     request.headers['Accept'] = 'application/json';
-    // request.headers['ngrok-skip-browser-warning'] = 'true';
 
     request.fields.addAll(fields);
 

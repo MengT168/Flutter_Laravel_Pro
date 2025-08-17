@@ -19,6 +19,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _isPasswordVisible = false;
 
   String? _logoUrl;
+  bool _isLogoLoading = true;
 
   @override
   void initState() {
@@ -27,11 +28,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Future<void> _fetchLogo() async {
+    // No need for setState here, we'll manage with _isLogoLoading
     final authService = context.read<AuthService>();
     final logos = await authService.getActiveLogos();
-    if (mounted && logos.isNotEmpty) {
+    if (mounted) {
       setState(() {
-        _logoUrl = logos[0]['thumbnail_url'];
+        if (logos.isNotEmpty) {
+          _logoUrl = logos[0]['thumbnail_url'];
+        }
+        _isLogoLoading = false;
       });
     }
   }
@@ -88,13 +93,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
               children: [
                 SizedBox(
                   height: 200,
-                  child: _logoUrl == null
+                  child: _isLogoLoading
                       ? const Center(child: CircularProgressIndicator())
-                      : Image.network(
+                      : (_logoUrl != null && _logoUrl!.isNotEmpty)
+                      ? Image.network(
                     _logoUrl!,
                     fit: BoxFit.contain,
-                    errorBuilder: (c, e, s) => Image.asset('assets/images/login.jpg'),
-                  ),
+                    errorBuilder: (c, e, s) => Image.asset('assets/images/login.jpg', fit: BoxFit.contain),
+                  )
+                      : Image.asset('assets/images/login.jpg', fit: BoxFit.contain),
                 ),
                 const SizedBox(height: 32),
 
