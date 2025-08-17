@@ -1101,6 +1101,38 @@ class AuthService with ChangeNotifier {
     }
   }
 
+  Future<bool> updateUser(int id, String name, String email, {String? password}) async {
+    final token = await getToken();
+    if (token == null) return false;
+
+    final body = {
+      'name': name,
+      'email': email,
+    };
+    if (password != null && password.isNotEmpty) {
+      body['password'] = password;
+    }
+
+    final response = await http.put(
+      Uri.parse('$_baseUrl/admin/users/$id'),
+      headers: {'Accept': 'application/json', 'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+      body: jsonEncode(body),
+    );
+    return response.statusCode == 200;
+  }
+
+  Future<bool> deleteUser(int id) async {
+    final token = await getToken();
+    if (token == null) return false;
+
+    final response = await http.delete(
+      Uri.parse('$_baseUrl/admin/users/$id'),
+      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
+    );
+    return response.statusCode == 200;
+  }
+}
+
 //   Future<Map<String, dynamic>?> loginWithFacebook() async {
 //     try {
 //       // 1. Get the origin of your Flutter app (e.g., http://localhost:12345)
@@ -1145,4 +1177,3 @@ class AuthService with ChangeNotifier {
 //       return null;
 //     }
 //   }
-}

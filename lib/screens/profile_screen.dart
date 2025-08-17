@@ -90,6 +90,14 @@ class ProfileScreen extends StatelessWidget {
           // _buildInfoRow(context, localizations.address as String, 'Not Provided'),
           const Divider(height: 40),
           _buildSettingsSection(context, localizations),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Text(
+              'For missing info, please contact administrator: +855 12 888 999',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ),
         ],
       ),
     );
